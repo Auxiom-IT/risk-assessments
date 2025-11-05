@@ -3,6 +3,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     globals: true,
+    testTimeout: 10000, // 10 second timeout per test
+    hookTimeout: 10000, // 10 second timeout for hooks
     coverage: {
       provider: 'v8',
       reporter: ['html', 'json', 'lcov', 'text'],

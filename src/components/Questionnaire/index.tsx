@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useAppState } from '../../context/AppStateContext';
 import CategoryRadarChart from '../CategoryRadarChart';
 import Footer from '../Footer';
+import Dropdown from '../Dropdown';
 
 const Questionnaire: React.FC = () => {
   const { questions, answers, setAnswer, score } = useAppState();
@@ -64,17 +65,13 @@ const Questionnaire: React.FC = () => {
               <span className='question-number'>Q{index + 1}</span>
               <label htmlFor={q.id} className='question-text'>{q.text}</label>
             </div>
-            <select
+            <Dropdown
               id={q.id}
               value={answers[q.id] || ''}
-              onChange={(e) => setAnswer(q.id, e.target.value)}
-              className={answers[q.id] ? 'answered' : ''}
-            >
-              <option value='' disabled>Select an answer...</option>
-              {q.options.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+              onChange={(value) => setAnswer(q.id, value)}
+              options={q.options}
+              placeholder="Select an answer..."
+            />
           </div>
         ))}
       </form>

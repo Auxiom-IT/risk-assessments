@@ -107,8 +107,12 @@ export const Dropdown: React.FC<DropdownProps> = ({
   useEffect(() => {
     if (isOpen && focusedIndex >= 0 && listRef.current) {
       const focusedElement = listRef.current.children[focusedIndex] as HTMLElement;
-      if (focusedElement && focusedElement.scrollIntoView) {
-        focusedElement.scrollIntoView({ block: 'nearest' });
+      if (focusedElement && typeof focusedElement.scrollIntoView === 'function') {
+        try {
+          focusedElement.scrollIntoView({ block: 'nearest' });
+        } catch {
+          // Ignore scrollIntoView errors in test environments
+        }
       }
     }
   }, [focusedIndex, isOpen]);
@@ -130,23 +134,23 @@ export const Dropdown: React.FC<DropdownProps> = ({
   };
 
   return (
-    <div 
+    <div
       className={`custom-dropdown ${className} ${value ? 'answered' : ''}`}
       ref={dropdownRef}
     >
       <button
         ref={buttonRef}
         id={id}
-        type="button"
+        type='button'
         className={`custom-dropdown-button ${isOpen ? 'open' : ''}`}
         onClick={handleToggle}
         onKeyDown={handleKeyDown}
-        aria-haspopup="listbox"
+        aria-haspopup='listbox'
         aria-expanded={isOpen}
         aria-labelledby={id ? `${id}-label` : undefined}
         disabled={disabled}
       >
-        <span className="custom-dropdown-button-text">
+        <span className='custom-dropdown-button-text'>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <span className={`custom-dropdown-arrow ${isOpen ? 'open' : ''}`}>▼</span>
@@ -155,8 +159,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
       {isOpen && (
         <ul
           ref={listRef}
-          className="custom-dropdown-list"
-          role="listbox"
+          className='custom-dropdown-list'
+          role='listbox'
           aria-labelledby={id}
         >
           {options.map((option, index) => (
@@ -166,7 +170,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
               className={`custom-dropdown-option ${
                 option.value === value ? 'selected' : ''
               } ${index === focusedIndex ? 'focused' : ''}`}
-              role="option"
+              role='option'
               aria-selected={option.value === value}
               onClick={() => handleSelect(option.value)}
               onMouseEnter={() => setFocusedIndex(index)}

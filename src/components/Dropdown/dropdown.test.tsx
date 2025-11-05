@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { Dropdown } from './index';
 
 describe('Dropdown', () => {
@@ -9,8 +9,14 @@ describe('Dropdown', () => {
     { value: 'option3', label: 'Option 3' },
   ];
 
+  beforeEach(() => {
+    // Mock scrollIntoView for jsdom
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
   });
 
   it('renders with placeholder when no value is selected', () => {
@@ -206,10 +212,15 @@ describe('Dropdown', () => {
     expect(screen.getByRole('listbox')).toBeTruthy();
 
     const outside = screen.getByTestId('outside');
-    fireEvent.mouseDown(outside);
+
+    // Use userEvent-like behavior: dispatch native event
+    const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true });
+    act(() => {
+      outside.dispatchEvent(mouseDownEvent);
+    });
 
     await waitFor(() => {
       expect(screen.queryByRole('listbox')).toBeNull();
-    });
+    }, { timeout: 1000 });
   });
 });

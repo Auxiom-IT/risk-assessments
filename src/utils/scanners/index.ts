@@ -9,20 +9,13 @@ import {
 } from '../../types/domainScan';
 
 // Import individual scanners
-import { dnsScanner } from './dnsScanner';
-import { emailAuthScanner } from './emailAuthScanner';
-import { certificateScanner } from './certificateScanner';
-import { rdapScanner } from './rdapScanner';
-import { sslLabsScanner } from './sslLabsScanner';
-import { securityHeadersScanner } from './securityHeadersScanner';
+import { dnsScanner, interpretDnsResult } from './dnsScanner';
+import { emailAuthScanner, interpretEmailAuthResult } from './emailAuthScanner';
+import { certificateScanner, interpretCertificateResult } from './certificateScanner';
+import { rdapScanner, interpretRdapResult } from './rdapScanner';
+import { sslLabsScanner, interpretSslLabsResult } from './sslLabsScanner';
+import { securityHeadersScanner, interpretSecurityHeadersResult } from './securityHeadersScanner';
 
-// Import interpretation functions
-import { interpretDnsResult } from './dnsScanner';
-import { interpretEmailAuthResult } from './emailAuthScanner';
-import { interpretCertificateResult } from './certificateScanner';
-import { interpretRdapResult } from './rdapScanner';
-import { interpretSslLabsResult } from './sslLabsScanner';
-import { interpretSecurityHeadersResult } from './securityHeadersScanner';
 
 // Default timeout for each scanner (30 seconds). Made mutable for testing.
 let DEFAULT_SCANNER_TIMEOUT = 30000;

@@ -5,6 +5,7 @@ import { TrackedButton } from '../TrackedButton';
 import { trackFormSubmit } from '../../utils/analytics';
 import { validateDomain } from '../../utils/domainValidation';
 import Footer from '../Footer';
+import { renderIssueWithLinks } from '../../utils/text';
 
 const DomainScanner = () => {
   const { runScanners, domainScanAggregate, scannerProgress } = useAppState();
@@ -162,7 +163,7 @@ const DomainScanner = () => {
                   <details className='issues-details'>
                     <summary>{prog.issues.length} issue(s) detected</summary>
                     <ul className='issues-list'>
-                      {prog.issues.map((i, idx) => <li key={idx}>{i}</li>)}
+                      {prog.issues.map((i, idx) => renderIssueWithLinks(i, idx))}
                     </ul>
                   </details>
                 )}

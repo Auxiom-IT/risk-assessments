@@ -181,26 +181,27 @@ describe('fetchDMARC', () => {
 
 describe('checkDKIM', () => {
   it('should return found DKIM selectors', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          Answer: [{ data: 'v=DKIM1; k=rsa; p=MIGfMA0...' }],
-        }),
-      })
-      .mockResolvedValueOnce({
+    // Mock to return DKIM records for 'google' and 'selector2' selectors
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      const urlStr = url.toString();
+      if (urlStr.includes('google._domainkey') || urlStr.includes('selector2._domainkey')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            Answer: [{ data: 'v=DKIM1; k=rsa; p=MIGfMA0...' }],
+          }),
+        });
+      }
+      return Promise.resolve({
         ok: true,
         json: async () => ({}),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          Answer: [{ data: 'v=DKIM1; k=rsa; p=MIGfMA0...' }],
-        }),
       });
+    });
 
     const result = await checkDKIM('example.com');
-    expect(result).toEqual(['default', 'selector2']);
+    expect(result).toContain('google');
+    expect(result).toContain('selector2');
+    expect(result).toHaveLength(2);
   });
 
   it('should return empty array when no DKIM selectors found', async () => {
@@ -214,17 +215,18 @@ describe('checkDKIM', () => {
     expect(result).toEqual([]);
   });
 
-  it('should check all default selectors', async () => {
+  it('should check multiple common selectors', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: async () => ({}),
     });
 
     await checkDKIM('example.com');
-    expect(global.fetch).toHaveBeenCalledTimes(3);
+    // We now check ~40 selectors including default, selector1, google, etc.
     expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('default._domainkey.example.com'));
     expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('selector1._domainkey.example.com'));
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('selector2._domainkey.example.com'));
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('google._domainkey.example.com'));
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('mailgun._domainkey.example.com'));
   });
 });
 

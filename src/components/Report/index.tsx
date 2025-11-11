@@ -5,6 +5,7 @@ import { interpretScannerResult } from '../../utils/scanners';
 import { exportToWord } from '../../utils/exportReport';
 import { TrackedButton } from '../TrackedButton';
 import { TrackedLink } from '../TrackedLink';
+import { renderIssueWithLinks } from '../../utils/text';
 import Footer from '../Footer';
 
 const Report: React.FC = () => {
@@ -131,7 +132,7 @@ const Report: React.FC = () => {
                     </div>
                     {sc.issues && sc.issues.length > 0 && (
                       <ul className='scanner-card-issues'>
-                        {sc.issues.map((iss) => <li key={iss}>{iss}</li>)}
+                        {sc.issues.map((iss, idx) => renderIssueWithLinks(iss, idx))}
                       </ul>
                     )}
                     {sc.id === 'sslLabs' && sc.data && (sc.data as { testUrl?: string }).testUrl ? (

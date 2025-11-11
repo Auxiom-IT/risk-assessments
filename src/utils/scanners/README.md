@@ -9,7 +9,7 @@ The scanner framework consists of:
 - **`index.ts`** - Main entry point that exports `SCANNERS`, `runAllScanners()`, `runScanner()`, and `interpretScannerResult()`
 - **Individual scanner files** - Each scanner (DNS, Email Auth, Certificates, etc.) in its own file
 - **Type definitions** - Shared types in `src/types/domainScan.ts`
-- **Helper utilities** - Domain checking functions in `src/utils/domainChecks.ts`
+- **Helper utilities** - Domain checking functions in `src/utils/scanners/domainChecks.ts`
 
 ## Available Scanners
 
@@ -226,7 +226,7 @@ interface BaseScannerResult {
 4. **Include data sources** - Credit the data source for transparency
 5. **Write comprehensive tests** - Test success cases, error cases, and edge cases
 6. **Keep scanners independent** - Don't rely on other scanners' results
-7. **Use helper functions** - Leverage `src/utils/domainChecks.ts` for common operations
+7. **Use helper functions** - Leverage `src/utils/scanners/domainChecks.ts` for common operations
 
 ## Interpretation Functions
 
@@ -255,7 +255,7 @@ export const interpretMyResult = (
 
 ## Helper Utilities
 
-Common domain checking functions are available in `src/utils/domainChecks.ts`:
+Common domain checking functions are available in `src/utils/scanners/domainChecks.ts`:
 
 ```typescript
 import { fetchDNS, extractSPF, fetchDMARC, checkDKIM, fetchCertificates } from '../domainChecks';
@@ -269,7 +269,8 @@ const spf = extractSPF(txtRecords);
 // Fetch DMARC record
 const dmarc = await fetchDMARC('example.com');
 
-// Check for DKIM selectors
+// Check for DKIM selectors (heuristic - checks ~40 common patterns)
+// Note: Cannot discover custom/random selectors due to DNS limitations
 const dkimSelectors = await checkDKIM('example.com');
 
 // Fetch certificates from crt.sh
@@ -317,6 +318,23 @@ Each scanner should have comprehensive tests covering:
 5. **Interpretation** - Severity levels are assigned correctly
 
 See existing scanner tests for examples and patterns to follow.
+
+## Known Limitations
+
+### DKIM Selector Discovery
+
+The `checkDKIM()` function attempts to discover DKIM selectors by checking ~40 common patterns used by major email providers. However, there are fundamental limitations:
+
+- **DNS doesn't support enumeration**: No way to list all `_domainkey` subdomains
+- **Selectors are arbitrary**: Providers can use any string (e.g., `8d58d5815ead896`, `google`, `default`)
+- **Custom selectors may be missed**: Only common patterns are checked
+
+**For detailed information**, see [docs/DKIM_SELECTOR_DISCOVERY.md](../../../docs/DKIM_SELECTOR_DISCOVERY.md)
+
+**User guidance**: When DKIM selectors aren't found, users are advised to:
+- Check their email provider's documentation
+- Look at email headers for the `s=` parameter in DKIM-Signature
+- Consult their DNS admin panel
 
 ## Contributing
 

@@ -87,7 +87,19 @@ export const emailAuthScanner: DomainScanner = {
     if (dkimSelectorsFound.length === 0) {
       issues.push('No DKIM selectors detected - emails cannot be cryptographically verified');
       warnings.push(
-        'Note: DKIM selector detection is heuristic (checks common selectors: default, selector1, selector2)'
+        'Note: Checked ~40 common DKIM selectors used by major email providers. ' +
+        'Custom/random selectors cannot be discovered via DNS queries alone.'
+      );
+      warnings.push(
+        'To verify DKIM is configured, try: ' +
+        '1) Check your email provider\'s documentation for your selector name, ' +
+        '2) Use EasyDMARC\'s free DKIM Lookup tool (https://easydmarc.com/tools/dkim-lookup) to auto-detect, or ' +
+        '3) Inspect email headers from sent emails for the DKIM-Signature "s=" parameter'
+      );
+    } else {
+      warnings.push(
+        `Found DKIM selector(s): ${dkimSelectorsFound.join(', ')}. ` +
+        'Additional selectors may exist but cannot be automatically discovered.'
       );
     }
 

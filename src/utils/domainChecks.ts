@@ -48,13 +48,50 @@ export const fetchDMARC = async (domain: string): Promise<string | undefined> =>
 };
 
 export const checkDKIM = async (domain: string): Promise<string[]> => {
-  const selectors = ['default', 'selector1', 'selector2'];
+  // Common DKIM selectors used by major email providers and services
+  // This is a heuristic approach - there's no way to enumerate all selectors via DNS
+  const selectors = [
+    // Generic/Common
+    'default', 'dkim', 'mail', 'email', 'smtp',
+
+    // Google Workspace / Gmail
+    'google', 'googlemail',
+
+    // Microsoft 365 / Office 365
+    'selector1', 'selector2',
+
+    // Common patterns
+    'k1', 'k2', 'k3', 's1', 's2', 's3',
+    'key1', 'key2', 'key3',
+    'dkim1', 'dkim2', 'dkim3',
+
+    // Marketing platforms
+    'mailgun', 'sendgrid', 'mandrill', 'sparkpost',
+    'mta', 'mta1', 'mta2',
+    'pm', 'pm1', 'pm2', // Postmark
+    'em', 'em1', 'em2', // Email service providers
+
+    // Other common patterns
+    'mx', 'mx1', 'mx2',
+    'smtpapi', 'api',
+    'marketing', 'transactional',
+  ];
+
   const found: string[] = [];
-  for (const sel of selectors) {
+
+  // Check all selectors in parallel for better performance
+  const checks = selectors.map(async (sel) => {
     const name = `${sel}._domainkey.${domain}`;
     const txt = await fetchTXT(name);
-    if (txt.some((t) => t.includes('v=DKIM1'))) found.push(sel);
-  }
+    if (txt.some((t) => t.includes('v=DKIM1'))) {
+      return sel;
+    }
+    return null;
+  });
+
+  const results = await Promise.all(checks);
+  found.push(...results.filter((r): r is string => r !== null));
+
   return found;
 };
 

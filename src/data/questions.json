@@ -366,6 +366,11 @@
       "category": "System & Data Protection",
       "options": [
         {
+          "option": "No backups exist",
+          "risk": "Without backups, data loss events could result in permanent loss of critical information and business operations.",
+          "points": 0
+        },
+        {
           "option": "Backups are not encrypted or are stored with production",
           "risk": "Unencrypted or co-resident backups enable data theft and magnify ransomware impact.",
           "points": 50

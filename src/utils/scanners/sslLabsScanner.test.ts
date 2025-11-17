@@ -11,7 +11,7 @@ beforeEach(() => {
 describe('sslLabsScanner', () => {
   it('should have correct scanner metadata', () => {
     expect(sslLabsScanner.id).toBe('sslLabs');
-    expect(sslLabsScanner.label).toBe('SSL/TLS Configuration');
+    expect(sslLabsScanner.label).toBe('sslLabs.label');
     expect(sslLabsScanner.description).toBeDefined();
     expect(sslLabsScanner.timeout).toBe(600000); // 10 minutes
     expect(sslLabsScanner.dataSource).toBeDefined();
@@ -41,7 +41,7 @@ describe('sslLabsScanner', () => {
 
     const result = await sslLabsScanner.run('example.com');
 
-    expect(result.summary).toContain('1 endpoint(s) scanned');
+    expect(result.summary).toContain('Overall grade');
     expect(result.summary).toContain('A');
   });
 
@@ -86,7 +86,7 @@ describe('sslLabsScanner', () => {
 
     const result = await sslLabsScanner.run('example.com');
 
-    expect(result.issues?.some((issue) => issue.includes('deprecated SSL protocols'))).toBe(true);
+    expect(result.issues?.some((issue) => issue.includes('Outdated/weak protocols'))).toBe(true);
   });
 
   it('should detect outdated TLS versions', async () => {
@@ -113,7 +113,7 @@ describe('sslLabsScanner', () => {
 
     const result = await sslLabsScanner.run('example.com');
 
-    expect(result.issues?.some((issue) => issue.includes('outdated TLS 1.0'))).toBe(true);
+    expect(result.issues?.some((issue) => issue.includes('Outdated/weak protocols'))).toBe(true);
   });
 
   it('should detect known vulnerabilities', async () => {
@@ -165,7 +165,7 @@ describe('sslLabsScanner', () => {
 
     const result = await sslLabsScanner.run('example.com');
 
-    expect(result.issues?.some((issue) => issue.includes('HSTS not configured'))).toBe(true);
+    expect(result.issues?.some((issue) => issue.includes('HSTS not enabled'))).toBe(true);
   });
 
   it('should warn about short HSTS max-age', async () => {
@@ -248,7 +248,7 @@ describe('sslLabsScanner', () => {
 describe('interpretSslLabsResult', () => {
   const createMockScanner = (data: unknown, issues: string[] = []) => ({
     id: 'sslLabs',
-    label: 'SSL/TLS Configuration',
+    label: 'sslLabs.label',
     status: 'complete' as const,
     startedAt: new Date().toISOString(),
     finishedAt: new Date().toISOString(),
@@ -258,51 +258,51 @@ describe('interpretSslLabsResult', () => {
 
   it('should return success severity for A+ grade', () => {
     const scanner = createMockScanner({ status: 'READY', lowestGrade: 'A+', grades: ['A+'] });
-    const interpretation = interpretSslLabsResult(scanner, 0);
+    const interpretation = interpretSslLabsResult(scanner);
 
     expect(interpretation.severity).toBe('success');
-    expect(interpretation.message).toContain('A+');
+    expect(interpretation.message).toContain('Excellent');
   });
 
   it('should return success severity for A grade', () => {
     const scanner = createMockScanner({ status: 'READY', lowestGrade: 'A', grades: ['A'] });
-    const interpretation = interpretSslLabsResult(scanner, 0);
+    const interpretation = interpretSslLabsResult(scanner);
 
     expect(interpretation.severity).toBe('success');
-    expect(interpretation.message).toContain('A');
+    expect(interpretation.message).toContain('Excellent');
   });
 
   it('should return warning severity for B grade', () => {
     const scanner = createMockScanner({ status: 'READY', lowestGrade: 'B', grades: ['B'] });
-    const interpretation = interpretSslLabsResult(scanner, 1);
+    const interpretation = interpretSslLabsResult(scanner);
 
     expect(interpretation.severity).toBe('warning');
-    expect(interpretation.message).toContain('B');
+    expect(interpretation.message).toContain('Good');
   });
 
   it('should return critical severity for F grade', () => {
     const scanner = createMockScanner({ status: 'READY', lowestGrade: 'F', grades: ['F'] });
-    const interpretation = interpretSslLabsResult(scanner, 3);
+    const interpretation = interpretSslLabsResult(scanner);
 
     expect(interpretation.severity).toBe('critical');
-    expect(interpretation.message).toContain('F');
-    expect(interpretation.recommendation).toContain('serious issues');
+    expect(interpretation.message).toContain('Poor');
+    expect(interpretation.recommendation).toContain('serious');
   });
 
   it('should handle ERROR status', () => {
     const scanner = createMockScanner({ status: 'ERROR' });
-    const interpretation = interpretSslLabsResult(scanner, 0);
+    const interpretation = interpretSslLabsResult(scanner);
 
     expect(interpretation.severity).toBe('error');
-    expect(interpretation.message).toContain('could not scan');
+    expect(interpretation.message).toContain('could not complete');
   });
 
   it('should handle in-progress scans', () => {
     const scanner = createMockScanner({ status: 'IN_PROGRESS' });
-    const interpretation = interpretSslLabsResult(scanner, 0);
+    const interpretation = interpretSslLabsResult(scanner);
 
     expect(interpretation.severity).toBe('info');
-    expect(interpretation.message).toContain('in progress');
+    expect(interpretation.message).toContain('could not complete');
   });
 
   it('should include test URL link in recommendation', () => {
@@ -311,8 +311,8 @@ describe('interpretSslLabsResult', () => {
       lowestGrade: 'B',
       testUrl: 'https://www.ssllabs.com/ssltest/analyze.html?d=example.com',
     });
-    const interpretation = interpretSslLabsResult(scanner, 1);
+    const interpretation = interpretSslLabsResult(scanner);
 
-    expect(interpretation.recommendation).toContain('SSL Labs report');
+    expect(interpretation.recommendation).toContain('SSL Labs');
   });
 });

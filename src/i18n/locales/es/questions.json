@@ -1,0 +1,445 @@
+{
+  "categories": {
+    "governance_program_management": "Gobernanza y Gestión del Programa",
+    "risk_management": "Gestión de Riesgos",
+    "access_control": "Control de Acceso",
+    "system_data_protection": "Protección de Sistemas y Datos",
+    "monitoring_incident_response": "Monitoreo y Respuesta a Incidentes",
+    "awareness_training": "Concientización y Capacitación",
+    "vendor_third_party_management": "Gestión de Proveedores y Terceros"
+  },
+  "questions": {
+    "governance_program_management_q1": {
+      "text": "¿Tiene políticas escritas de seguridad de la información que se revisen y aprueben anualmente?",
+      "options": {
+        "opt0": {
+          "label": "No existen políticas formales de seguridad de la información",
+          "risk": "La organización carece de políticas documentadas de seguridad de la información, lo que resulta en ninguna dirección formal o responsabilidad para las prácticas de seguridad."
+        },
+        "opt1": {
+          "label": "Existen políticas en borrador pero no están formalmente aprobadas",
+          "risk": "Las políticas en borrador permanecen sin aprobar, dejándolas inaplicables y potencialmente desalineadas con requisitos legales o contractuales."
+        },
+        "opt2": {
+          "label": "Existen políticas aprobadas; la última revisión fue hace más de 24 meses",
+          "risk": "Las políticas existentes están desactualizadas, haciendo referencia a controles obsoletos y no abordan las amenazas emergentes."
+        },
+        "opt3": {
+          "label": "Existen políticas aprobadas; última revisión dentro de los últimos 12–24 meses",
+          "risk": "Las revisiones de políticas ocurren con poca frecuencia, aumentando el riesgo de desviación de las expectativas organizacionales o regulatorias."
+        },
+        "opt4": {
+          "label": "Existen políticas aprobadas; revisadas y aprobadas dentro de los últimos 12 meses",
+          "risk": "Las políticas se aprueban anualmente, pero el control de versiones o la trazabilidad limitados debilitan la integridad de la gobernanza."
+        },
+        "opt5": {
+          "label": "Existen políticas aprobadas; revisadas dentro de los últimos 12 meses y se mantiene el control de versiones",
+          "risk": "Las políticas con control de versiones mejoran la auditabilidad, pero la falta de claridad en la propiedad retrasa las actualizaciones necesarias."
+        },
+        "opt6": {
+          "label": "Existen políticas aprobadas; revisadas dentro de los últimos 12 meses con evidencia documentada y aprobación de la alta dirección",
+          "risk": "Las políticas se revisan anualmente, con control de versiones y aprobadas por la alta dirección con evidencia documentada, demostrando una gobernanza madura y gestión del ciclo de vida de políticas."
+        }
+      }
+    },
+    "governance_program_management_q2": {
+      "text": "¿Se comunican, reconocen y hacen accesibles efectivamente las políticas y estándares a todos los empleados y contratistas?",
+      "options": {
+        "opt0": {
+          "label": "Las políticas no se comparten ni son accesibles para el personal",
+          "risk": "Los empleados y contratistas desconocen las expectativas de las políticas, aumentando el incumplimiento y el comportamiento inconsistente."
+        },
+        "opt1": {
+          "label": "Las políticas están disponibles pero no se comunican activamente",
+          "risk": "Las políticas no comunicadas limitan la conciencia y reducen la responsabilidad por las obligaciones de cumplimiento."
+        },
+        "opt2": {
+          "label": "Las políticas se distribuyen por correo electrónico o intranet sin seguimiento de reconocimiento",
+          "risk": "La comunicación sin seguimiento no proporciona garantía de que el personal haya leído o comprendido los requisitos de la política."
+        },
+        "opt3": {
+          "label": "Las políticas se comunican durante la incorporación y se recuerdan periódicamente",
+          "risk": "Los recordatorios periódicos mejoran la conciencia pero carecen de reconocimiento formal o medición de comprensión."
+        },
+        "opt4": {
+          "label": "Las políticas se comunican a través de la incorporación, capacitación de actualización anual y reconocimiento rastreado",
+          "risk": "Las políticas se comunican y reconocen consistentemente por todo el personal, reflejando buenas prácticas de gobernanza y conciencia."
+        }
+      }
+    },
+    "governance_program_management_q3": {
+      "text": "¿Mantiene un inventario de sistemas de información, aplicaciones y activos?",
+      "options": {
+        "opt0": {
+          "label": "No existe un inventario de activos",
+          "risk": "La organización carece de un inventario de activos, dejando sistemas desconocidos sin seguridad, sin parches o sin monitoreo."
+        },
+        "opt1": {
+          "label": "Inventario manual y ad hoc",
+          "risk": "Los inventarios manuales o ad hoc son propensos a errores y rápidamente quedan desactualizados."
+        },
+        "opt2": {
+          "label": "Inventario parcial que no cubre todos los sistemas o aplicaciones",
+          "risk": "Los inventarios parciales de activos resultan en sistemas no gestionados y explotables."
+        },
+        "opt3": {
+          "label": "Inventario centralizado para endpoints, servidores y aplicaciones principales",
+          "risk": "Los inventarios centralizados mejoran la supervisión, pero los datos obsoletos obstaculizan la respuesta oportuna y la gestión del ciclo de vida."
+        },
+        "opt4": {
+          "label": "Inventario automatizado y reconciliado en endpoints, servidores, red, nube y SaaS",
+          "risk": "Los inventarios automatizados completos aseguran visibilidad completa de activos y responsabilidad en todos los entornos, alineándose con las mejores prácticas."
+        }
+      }
+    },
+    "governance_program_management_q4": {
+      "text": "¿Existe un individuo o comité designado responsable del programa de seguridad?",
+      "options": {
+        "opt0": {
+          "label": "Ningún individuo o comité es responsable del programa de seguridad",
+          "risk": "Ningún individuo o comité es responsable del programa de seguridad, dejando los riesgos sin gestionar y la respuesta sin coordinar."
+        },
+        "opt1": {
+          "label": "Las responsabilidades se asignan informalmente pero no están documentadas",
+          "risk": "Las asignaciones informales de responsabilidad crean ambigüedad y brechas críticas en la supervisión de seguridad."
+        },
+        "opt2": {
+          "label": "Un individuo designado es responsable pero carece de autoridad o recursos",
+          "risk": "El personal de seguridad designado carece de suficiente autoridad o recursos, socavando la aplicación de controles."
+        },
+        "opt3": {
+          "label": "Un líder de seguridad (por ejemplo, CISO/vCISO) supervisa el programa con responsabilidades definidas",
+          "risk": "Un líder de seguridad definido mejora la responsabilidad pero puede dejar brechas interfuncionales sin resolver."
+        },
+        "opt4": {
+          "label": "Un líder y comité de gobernanza gestionan el programa con cartas, KPIs y supervisión ejecutiva",
+          "risk": "Un comité de gobernanza respaldado por el liderazgo con KPIs y patrocinio ejecutivo demuestra responsabilidad de programa madura y sostenible."
+        }
+      }
+    },
+    "risk_management_q9": {
+      "text": "¿Mantiene un registro de riesgos que rastrea los riesgos identificados y las acciones de mitigación?",
+      "options": {
+        "opt0": {
+          "label": "No se mantiene un registro de riesgos",
+          "risk": "La organización carece de un registro formal de riesgos, lo que lleva a riesgos no gestionados y olvidados."
+        },
+        "opt1": {
+          "label": "Seguimiento informal sin propietarios o fechas de vencimiento",
+          "risk": "Los riesgos se rastrean informalmente, resultando en mala responsabilidad y mitigación inoportuna."
+        },
+        "opt2": {
+          "label": "Existe un registro con propietarios/estado pero actualizaciones irregulares",
+          "risk": "Los registros de riesgos existen pero se actualizan inconsistentemente, oscureciendo la exposición actual y el progreso."
+        },
+        "opt3": {
+          "label": "Registro mantenido con propietarios, fechas de vencimiento, planes de tratamiento y cadencia de revisión",
+          "risk": "Un registro mantenido con propiedad, planes de tratamiento y revisiones regulares demuestra gestión de riesgos estructurada alineada con las mejores prácticas."
+        },
+        "opt4": {
+          "label": "Registro integrado con informes de gobernanza que impulsan la priorización y financiación",
+          "risk": "El registro de riesgos se integra con informes de gobernanza para impulsar decisiones de priorización y financiación, reflejando gestión de riesgos empresariales madura."
+        }
+      }
+    },
+    "access_control_q14": {
+      "text": "¿Se utiliza MFA en su organización?",
+      "options": {
+        "opt0": {
+          "label": "MFA no está aplicado para acceso privilegiado o remoto",
+          "risk": "La ausencia de autenticación multifactor (MFA) deja las credenciales altamente susceptibles a compromiso."
+        },
+        "opt1": {
+          "label": "MFA está aplicado solo para acceso remoto",
+          "risk": "MFA limitado al acceso remoto expone los sistemas internos a ataques de movimiento lateral."
+        },
+        "opt2": {
+          "label": "MFA está aplicado para cuentas privilegiadas y acceso remoto",
+          "risk": "MFA para usuarios privilegiados y remotos reduce el riesgo de toma de control, aunque las aplicaciones de alto riesgo pueden permanecer desprotegidas."
+        },
+        "opt3": {
+          "label": "MFA está aplicado para todo acceso privilegiado/remoto y aplicaciones de alto riesgo con acceso condicional",
+          "risk": "MFA completo con acceso condicional protege todas las aplicaciones de alto riesgo y cuentas privilegiadas, alineándose con las mejores prácticas de gestión de acceso."
+        }
+      }
+    },
+    "access_control_q15": {
+      "text": "¿Se aprovisionan y desaprovisionan las cuentas según un flujo de trabajo documentado?",
+      "options": {
+        "opt0": {
+          "label": "Las cuentas se crean/eliminan sin un flujo de trabajo documentado",
+          "risk": "Los procesos de aprovisionamiento no documentados causan cuentas huérfanas y acceso excesivo de usuarios."
+        },
+        "opt1": {
+          "label": "Existe un flujo de trabajo documentado pero se sigue inconsistentemente",
+          "risk": "La gestión inconsistente de cuentas deja acceso obsoleto o excesivo sin abordar."
+        },
+        "opt2": {
+          "label": "Flujo de trabajo documentado con aprobaciones y listas de verificación para aprovisionamiento/desaprovisionamiento",
+          "risk": "Los flujos de trabajo documentados minimizan los errores de acceso pero aún arriesgan retrasos manuales."
+        },
+        "opt3": {
+          "label": "Flujo de trabajo automatizado a través de integración HRIS/IdP con cambios de acceso registrados",
+          "risk": "El aprovisionamiento y desaprovisionamiento automatizado con integración HRIS/IdP mejora la seguridad y auditabilidad, representando la mejor práctica del ciclo de vida de identidad."
+        }
+      }
+    },
+    "access_control_q16": {
+      "text": "¿Revisa los derechos de acceso de los usuarios al menos anualmente?",
+      "options": {
+        "opt0": {
+          "label": "Los derechos de acceso de los usuarios no se revisan periódicamente",
+          "risk": "Sin revisiones, el acceso excesivo u obsoleto persiste sin ser notado."
+        },
+        "opt1": {
+          "label": "Revisiones de acceso ad hoc o anuales para sistemas clave",
+          "risk": "Las revisiones limitadas o ad hoc pierden combinaciones tóxicas y brechas de privilegio mínimo."
+        },
+        "opt2": {
+          "label": "Revisiones trimestrales para sistemas clave con seguimiento de remediación",
+          "risk": "Las revisiones trimestrales reducen el aumento de privilegios, aunque pueden permanecer brechas de alcance."
+        },
+        "opt3": {
+          "label": "Revisiones trimestrales para todos los sistemas vinculadas a cambios de rol y necesidades reguladas",
+          "risk": "Las revisiones de acceso completas y conscientes de roles en todos los sistemas fortalecen la aplicación de privilegio mínimo y la alineación regulatoria."
+        }
+      }
+    },
+    "access_control_q18": {
+      "text": "¿Se registran y monitorean las sesiones privilegiadas?",
+      "options": {
+        "opt0": {
+          "label": "Las sesiones privilegiadas no se registran ni monitorean",
+          "risk": "La falta de monitoreo oculta el mal uso y el movimiento lateral."
+        },
+        "opt1": {
+          "label": "Las sesiones privilegiadas se registran pero no se revisan",
+          "risk": "Los registros no revisados proporcionan disuasión débil y detección retrasada."
+        },
+        "opt2": {
+          "label": "Los registros se revisan con alertas",
+          "risk": "La revisión de registros con alertas mejora la detección, aunque los ataques rápidos aún pueden evadir."
+        },
+        "opt3": {
+          "label": "Monitoreo en tiempo real y grabación de sesiones para sistemas críticos",
+          "risk": "El monitoreo en tiempo real y la grabación de sesiones proporcionan capacidades sólidas de detección, respuesta y forenses en línea con las mejores prácticas de acceso privilegiado."
+        }
+      }
+    },
+    "system_data_protection_q22": {
+      "text": "¿Están protegidos los endpoints con anti-malware/EDR administrado centralmente?",
+      "options": {
+        "opt0": {
+          "label": "Sin anti-malware/EDR administrado centralmente",
+          "risk": "Sin protección de endpoints administrada centralmente, el malware y ransomware pueden propagarse rápidamente y evadir la detección en todo el entorno."
+        },
+        "opt1": {
+          "label": "Antivirus heredado en algunos endpoints",
+          "risk": "El antivirus heredado pierde técnicas modernas, permitiendo tiempo de permanencia y exfiltración de datos."
+        },
+        "opt2": {
+          "label": "EDR en todas las estaciones de trabajo",
+          "risk": "EDR en estaciones de trabajo reduce el compromiso impulsado por usuarios, pero los servidores desprotegidos siguen siendo objetivos atractivos."
+        },
+        "opt3": {
+          "label": "EDR en todos los endpoints incluyendo servidores con monitoreo MDR/SOC",
+          "risk": "EDR completo con MDR/SOC reduce el tiempo de detección, aunque debe mantenerse el ajuste y la cobertura."
+        }
+      }
+    },
+    "system_data_protection_q23": {
+      "text": "¿Se parchean y actualizan regularmente los sistemas según un cronograma definido?",
+      "options": {
+        "opt0": {
+          "label": "El parcheo es ad hoc sin SLAs definidos",
+          "risk": "El parcheo ad hoc deja vulnerabilidades conocidas explotables."
+        },
+        "opt1": {
+          "label": "Mensual para estaciones de trabajo; servidores ad hoc",
+          "risk": "La cadencia inconsistente crea exposición desigual entre sistemas."
+        },
+        "opt2": {
+          "label": "SLAs definidos para todos los sistemas con ventanas de mantenimiento",
+          "risk": "Los SLAs definidos reducen las ventanas de exposición, pero las excepciones deben rastrearse y remediarse."
+        },
+        "opt3": {
+          "label": "Parcheo basado en riesgos con remediación rápida e informes de cumplimiento",
+          "risk": "El parcheo basado en riesgos con remediación rápida e informes minimiza la exposición de alto impacto y respalda las mejores prácticas de cumplimiento."
+        }
+      }
+    },
+    "system_data_protection_q24": {
+      "text": "¿Utiliza configuraciones de línea base seguras para servidores, endpoints y entornos en la nube?",
+      "options": {
+        "opt0": {
+          "label": "No se utilizan configuraciones de línea base seguras",
+          "risk": "Sin líneas base seguras, las configuraciones son inconsistentes e inseguras."
+        },
+        "opt1": {
+          "label": "Líneas base para un subconjunto de sistemas",
+          "risk": "La cobertura parcial de líneas base deja brechas de configuración explotables."
+        },
+        "opt2": {
+          "label": "Líneas base para servidores y endpoints con revisión periódica",
+          "risk": "Las revisiones periódicas de líneas base mejoran la consistencia, aunque las brechas de aplicación pueden permitir desviación."
+        },
+        "opt3": {
+          "label": "Líneas base para servidores, endpoints y nube con cumplimiento forzado y remediación de desviación",
+          "risk": "Las líneas base forzadas y monitoreadas con remediación de desviación en servidores, endpoints y nube se alinean con las mejores prácticas de configuración segura."
+        }
+      }
+    },
+    "system_data_protection_q25": {
+      "text": "¿Están cifradas las copias de seguridad y almacenadas en un entorno separado y asegurado?",
+      "options": {
+        "opt0": {
+          "label": "No existen copias de seguridad",
+          "risk": "Sin copias de seguridad, los eventos de pérdida de datos podrían resultar en pérdida permanente de información crítica y operaciones comerciales."
+        },
+        "opt1": {
+          "label": "Las copias de seguridad no están cifradas o se almacenan con producción",
+          "risk": "Las copias de seguridad no cifradas o co-residentes permiten el robo de datos y magnifican el impacto del ransomware."
+        },
+        "opt2": {
+          "label": "Las copias de seguridad están cifradas pero almacenadas dentro del mismo dominio de seguridad",
+          "risk": "Las copias de seguridad cifradas dentro del mismo dominio permanecen en riesgo de compromiso simultáneo."
+        },
+        "opt3": {
+          "label": "Las copias de seguridad están cifradas y almacenadas en un entorno separado asegurado",
+          "risk": "Las copias de seguridad cifradas se almacenan de forma segura en un entorno separado con controles de acceso apropiados, mejorando la resiliencia."
+        },
+        "opt4": {
+          "label": "Las copias de seguridad están cifradas, inmutables/offline, con acceso segregado",
+          "risk": "Las copias de seguridad están cifradas e inmutables/offline con rutas de acceso segregadas, proporcionando fuerte resistencia al ransomware y garantía de recuperación."
+        }
+      }
+    },
+    "monitoring_incident_response_q33": {
+      "text": "¿Registra y monitorea eventos de seguridad de sistemas críticos?",
+      "options": {
+        "opt0": {
+          "label": "Los registros de eventos de seguridad no están centralizados",
+          "risk": "Los registros descentralizados impiden la detección y forense."
+        },
+        "opt1": {
+          "label": "Registros centralizados para un subconjunto de fuentes",
+          "risk": "La centralización parcial deja puntos ciegos en sistemas críticos."
+        },
+        "opt2": {
+          "label": "Registros centralizados ampliamente con análisis y normalización",
+          "risk": "La recopilación de registros amplia y normalizada permite una detección e investigación efectivas consistentes con las mejores prácticas de monitoreo."
+        }
+      }
+    },
+    "monitoring_incident_response_q35": {
+      "text": "¿Se clasifican e investigan activamente las alertas de las herramientas de detección?",
+      "options": {
+        "opt0": {
+          "label": "No hay umbrales definidos ni alertas para actividad sospechosa",
+          "risk": "Sin alertas significativas, la actividad sospechosa pasa desapercibida hasta que ocurre el daño."
+        },
+        "opt1": {
+          "label": "Alertas básicas para eventos comunes",
+          "risk": "Las alertas básicas capturan problemas comunes pero pueden producir ruido y fatiga."
+        },
+        "opt2": {
+          "label": "Alertas basadas en riesgos afinadas con runbooks y escalamiento",
+          "risk": "Las alertas basadas en riesgos y afinadas con runbooks y escalamiento respaldan el manejo de incidentes oportuno y consistente en línea con las mejores prácticas."
+        }
+      }
+    },
+    "monitoring_incident_response_q36": {
+      "text": "¿Existe un Plan de Respuesta a Incidentes (IRP) documentado?",
+      "options": {
+        "opt0": {
+          "label": "No hay Plan de Respuesta a Incidentes (IRP) documentado",
+          "risk": "Sin un IRP, la respuesta es ad hoc, lenta y propensa a errores."
+        },
+        "opt1": {
+          "label": "IRP borrador no aprobado o mantenido",
+          "risk": "Los planes de respuesta a incidentes no aprobados u obsoletos socavan la coordinación durante las crisis."
+        },
+        "opt2": {
+          "label": "IRP aprobado revisado al menos anualmente",
+          "risk": "Un Plan de Respuesta a Incidentes formalmente aprobado y revisado anualmente asegura la preparación y respuesta coordinada, reflejando las mejores prácticas de la industria."
+        }
+      }
+    },
+    "monitoring_incident_response_q38": {
+      "text": "¿Se realizan ejercicios de respuesta a incidentes (simulacros o en vivo) anualmente?",
+      "options": {
+        "opt0": {
+          "label": "No se realizan ejercicios de respuesta a incidentes",
+          "risk": "Sin ejercicios, los equipos no están preparados y los roles permanecen poco claros."
+        },
+        "opt1": {
+          "label": "Ejercicios de simulacro realizados menos de anualmente",
+          "risk": "Los ejercicios poco frecuentes permiten la deriva de procesos y atrofia de habilidades."
+        },
+        "opt2": {
+          "label": "Ejercicios anuales de respuesta a incidentes con elementos de acción rastreados",
+          "risk": "Los ejercicios anuales con mejoras rastreadas fortalecen la preparación y mejora continua en línea con las mejores prácticas de respuesta a incidentes."
+        }
+      }
+    },
+    "awareness_training_q41": {
+      "text": "¿Los empleados reciben capacitación de concientización de seguridad al menos anualmente?",
+      "options": {
+        "opt0": {
+          "label": "No se proporciona capacitación de concientización de seguridad",
+          "risk": "La falta de capacitación aumenta el error humano y el riesgo de ingeniería social."
+        },
+        "opt1": {
+          "label": "Capacitación menos de anualmente o solo en la incorporación",
+          "risk": "La capacitación poco frecuente deja a los empleados no preparados para amenazas en evolución."
+        },
+        "opt2": {
+          "label": "Capacitación anual con seguimiento de finalización",
+          "risk": "La capacitación de concientización de seguridad anual y rastreada para todo el personal respalda una cultura de seguridad sólida y alineación regulatoria."
+        }
+      }
+    },
+    "vendor_third_party_management_q45": {
+      "text": "¿Evalúa los controles de seguridad de los proveedores antes de incorporarlos?",
+      "options": {
+        "opt0": {
+          "label": "No hay informes regulares al liderazgo ejecutivo o junta directiva",
+          "risk": "La falta de informes limita la supervisión y desprioriza la inversión en seguridad."
+        },
+        "opt1": {
+          "label": "Actualizaciones informales o informes solo posteriores a incidentes",
+          "risk": "Las actualizaciones informales o posteriores a incidentes obstaculizan la responsabilidad y las decisiones oportunas."
+        },
+        "opt2": {
+          "label": "Informes periódicos enfocados en actividades (no en riesgos/resultados)",
+          "risk": "Los informes centrados en actividades oscurecen el riesgo verdadero y los resultados comerciales."
+        },
+        "opt3": {
+          "label": "Informes regulares de riesgos clave, métricas y estado de remediación",
+          "risk": "Los informes regulares centrados en riesgos con métricas y estado de remediación permiten la toma de decisiones informadas y priorización."
+        },
+        "opt4": {
+          "label": "Informes alineados con el apetito de riesgo con solicitudes de decisión explícitas",
+          "risk": "Los informes alineados con el apetito de riesgo con solicitudes de decisión explícitas respaldan la asignación de recursos oportuna y las mejores prácticas de gobernanza."
+        }
+      }
+    },
+    "vendor_third_party_management_q47": {
+      "text": "¿Los contratos incluyen obligaciones de protección de datos y confidencialidad?",
+      "options": {
+        "opt0": {
+          "label": "Los contratos carecen de obligaciones de protección de datos o confidencialidad",
+          "risk": "Los contratos de proveedores que carecen de cláusulas de protección de datos o confidencialidad reducen el apalancamiento de la organización para hacer cumplir la seguridad."
+        },
+        "opt1": {
+          "label": "Los contratos incluyen cláusulas básicas de confidencialidad",
+          "risk": "Los términos básicos de confidencialidad ofrecen protección limitada sin requisitos de seguridad concretos."
+        },
+        "opt2": {
+          "label": "Los contratos incluyen protección de datos, notificación de brechas y obligaciones de control de seguridad alineadas al riesgo",
+          "risk": "Los contratos incluyen protección de datos, notificación de brechas y obligaciones de seguridad alineadas con el riesgo, reflejando prácticas sólidas de gestión de riesgos de terceros."
+        }
+      }
+    }
+  }
+}

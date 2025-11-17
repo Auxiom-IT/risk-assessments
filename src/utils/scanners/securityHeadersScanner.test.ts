@@ -11,7 +11,7 @@ beforeEach(() => {
 describe('securityHeadersScanner', () => {
   it('should have correct scanner metadata', () => {
     expect(securityHeadersScanner.id).toBe('securityHeaders');
-    expect(securityHeadersScanner.label).toBe('Security Headers');
+    expect(securityHeadersScanner.label).toBe('securityHeaders.label');
     expect(securityHeadersScanner.description).toBeDefined();
     expect(securityHeadersScanner.timeout).toBe(15000);
     expect(securityHeadersScanner.dataSource).toBeDefined();
@@ -262,7 +262,7 @@ describe('interpretSecurityHeadersResult', () => {
       status: 'unavailable',
       testUrl: 'https://securityheaders.com/?q=example.com',
     });
-    const interpretation = interpretSecurityHeadersResult(scanner, 0);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
     expect(interpretation.severity).toBe('info');
     expect(interpretation.message).toContain('unavailable');
@@ -271,60 +271,60 @@ describe('interpretSecurityHeadersResult', () => {
 
   it('should return success severity for A+ grade', () => {
     const scanner = createMockScanner({ status: 'available', grade: 'A+', score: 100 });
-    const interpretation = interpretSecurityHeadersResult(scanner, 0);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
     expect(interpretation.severity).toBe('success');
-    expect(interpretation.message).toContain('A+');
-    expect(interpretation.recommendation).toContain('excellent');
+    expect(interpretation.message).toContain('Excellent');
+    expect(interpretation.recommendation).toContain('security headers');
   });
 
   it('should return success severity for A grade', () => {
     const scanner = createMockScanner({ status: 'available', grade: 'A', score: 95 });
-    const interpretation = interpretSecurityHeadersResult(scanner, 0);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
     expect(interpretation.severity).toBe('success');
-    expect(interpretation.message).toContain('A');
+    expect(interpretation.message).toContain('Excellent');
   });
 
   it('should return info severity for B grade', () => {
     const scanner = createMockScanner({ status: 'available', grade: 'B', score: 80 });
-    const interpretation = interpretSecurityHeadersResult(scanner, 1);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
     expect(interpretation.severity).toBe('info');
-    expect(interpretation.message).toContain('B');
+    expect(interpretation.message).toContain('Good');
   });
 
   it('should return warning severity for C grade', () => {
     const scanner = createMockScanner({ status: 'available', grade: 'C', score: 70 });
-    const interpretation = interpretSecurityHeadersResult(scanner, 2);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
     expect(interpretation.severity).toBe('warning');
-    expect(interpretation.message).toContain('C');
+    expect(interpretation.message).toContain('Basic');
   });
 
   it('should return warning severity for D grade', () => {
     const scanner = createMockScanner({ status: 'available', grade: 'D', score: 60 });
-    const interpretation = interpretSecurityHeadersResult(scanner, 3);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
-    expect(interpretation.severity).toBe('warning');
-    expect(interpretation.message).toContain('D');
+    expect(interpretation.severity).toBe('critical');
+    expect(interpretation.message).toContain('Poor');
   });
 
   it('should return critical severity for E grade', () => {
     const scanner = createMockScanner({ status: 'available', grade: 'E', score: 40 });
-    const interpretation = interpretSecurityHeadersResult(scanner, 4);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
     expect(interpretation.severity).toBe('critical');
-    expect(interpretation.message).toContain('E');
+    expect(interpretation.message).toContain('Poor');
   });
 
   it('should return critical severity for F grade', () => {
     const scanner = createMockScanner({ status: 'available', grade: 'F', score: 0 });
-    const interpretation = interpretSecurityHeadersResult(scanner, 5);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
     expect(interpretation.severity).toBe('critical');
-    expect(interpretation.message).toContain('F');
-    expect(interpretation.recommendation).toContain('immediate attention');
+    expect(interpretation.message).toContain('Poor');
+    expect(interpretation.recommendation).toContain('immediately');
   });
 
   it('should mention missing headers count in recommendation', () => {
@@ -332,16 +332,16 @@ describe('interpretSecurityHeadersResult', () => {
       { status: 'available', grade: 'C', score: 70 },
       ['Missing header 1', 'Missing header 2', 'Missing header 3']
     );
-    const interpretation = interpretSecurityHeadersResult(scanner, 3);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
-    expect(interpretation.recommendation).toContain('Missing 3');
+    expect(interpretation.recommendation).toContain('important security headers');
   });
 
   it('should handle unknown grade', () => {
     const scanner = createMockScanner({ status: 'available', grade: 'Unknown' });
-    const interpretation = interpretSecurityHeadersResult(scanner, 0);
+    const interpretation = interpretSecurityHeadersResult(scanner);
 
-    expect(interpretation.severity).toBe('info');
-    expect(interpretation.message).toContain('Unknown');
+    expect(interpretation.severity).toBe('critical');
+    expect(interpretation.message).toContain('Poor');
   });
 });

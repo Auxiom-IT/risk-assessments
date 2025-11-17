@@ -1,0 +1,216 @@
+{
+  "app": {
+    "title": "Herramienta de Evaluación de Riesgos",
+    "loading": "Cargando..."
+  },
+  "navigation": {
+    "home": "Inicio",
+    "questionnaire": "Cuestionario",
+    "report": "Informe",
+    "domainScan": "Escaneo de Dominio",
+    "themeLight": "☀️ Claro",
+    "themeDark": "🌙 Oscuro"
+  },
+  "footer": {
+    "builtBy": "Hecho con ❤️ por",
+    "blacksmith": "Blacksmith InfoSec",
+    "privacy": "Política de Privacidad",
+    "terms": "Términos de Servicio",
+    "contact": "Contáctenos",
+    "freeAndOpenSource": "Esta herramienta es gratuita y",
+    "openSource": "código abierto",
+    "haveSuggestion": "¿Tiene una sugerencia o encontró un error?",
+    "letUsKnow": "Déjenos saber",
+    "selectLanguage": "Seleccionar idioma",
+    "languageEnglish": "English",
+    "languageSpanish": "Español"
+  },
+  "buttons": {
+    "start": "Iniciar Evaluación",
+    "continue": "Continuar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "submit": "Enviar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "reset": "Reiniciar",
+    "export": "Exportar",
+    "print": "Imprimir",
+    "scan": "Escanear",
+    "clear": "Limpiar",
+    "import": "Importar"
+  },
+  "status": {
+    "excellent": "Excelente",
+    "good": "Bueno",
+    "fair": "Aceptable",
+    "needsImprovement": "Necesita Mejoras",
+    "loading": "Cargando...",
+    "scanning": "Escaneando...",
+    "complete": "Completo",
+    "error": "Error"
+  },
+  "errors": {
+    "generic": "Ocurrió un error. Por favor, inténtelo de nuevo.",
+    "notFound": "Página no encontrada",
+    "invalidInput": "Entrada inválida",
+    "required": "Este campo es requerido"
+  },
+  "home": {
+    "title": "Evaluación de Riesgos",
+    "subtitle": "Verificación de seguridad gratuita, privada y rápida",
+    "description": "Evalúe la preparación de ciberseguridad de su organización con nuestro cuestionario integral y herramienta de escaneo de dominios.",
+    "getStarted": "Comenzar",
+    "questionnaireDescription": "Responda preguntas de seguridad estructuradas para una evaluación rápida.",
+    "domainScanDescription": "Ejecute verificaciones automáticas de DNS, correo y certificados.",
+    "reportDescription": "Vea el puntaje de riesgo, orientación de remediación y exporte los resultados.",
+    "importDescription": "Restaure una evaluación guardada de forma segura.",
+    "privacyNote": "Los datos se almacenan localmente en su navegador. No se transmiten respuestas ni escaneos a un servidor.",
+    "features": {
+      "title": "Características",
+      "free": {
+        "title": "100% Gratis",
+        "description": "Sin costo, no se requiere tarjeta de crédito. Acceso completo a todas las funciones."
+      },
+      "private": {
+        "title": "Completamente Privado",
+        "description": "Sus datos permanecen en su navegador. Sin seguimiento, sin almacenamiento en servidores."
+      },
+      "fast": {
+        "title": "Resultados Rápidos",
+        "description": "Obtenga su evaluación de seguridad en minutos, no en días."
+      },
+      "comprehensive": {
+        "title": "Integral",
+        "description": "Cubre todos los dominios principales de seguridad y mejores prácticas."
+      }
+    }
+  },
+  "questionnaire": {
+    "title": "Evaluación de Riesgos de Seguridad",
+    "subtitle": "Responda cada pregunta a continuación para evaluar su postura de seguridad. Su puntuación de riesgo se actualiza en tiempo real.",
+    "questionsAnswered": "Preguntas Respondidas",
+    "complete": "{{percent}}% Completo",
+    "overallScore": "Puntuación de Seguridad General",
+    "categoryAnalysis": "Análisis por Categoría",
+    "categoryBreakdown": "Desglose visual de su postura de seguridad en dominios clave",
+    "selectAnswer": "Seleccione una respuesta..."
+  },
+  "report": {
+    "title": "Informe de Riesgo de Seguridad",
+    "overallScore": "Puntuación General de Seguridad",
+    "categoryAnalysis": "Análisis por Categoría",
+    "recommendations": "Recomendaciones",
+    "domainScanResults": "Escaneo de Seguridad del Dominio",
+    "exportWord": "Exportar Word",
+    "exportJSON": "Exportar JSON",
+    "print": "Imprimir",
+    "scoreExcellent": "Postura de Seguridad Excelente",
+    "scoreGood": "Buena Postura de Seguridad",
+    "scoreFair": "Regular - Se Necesitan Mejoras",
+    "scorePoor": "Crítico - Acción Inmediata Requerida",
+    "tests": "prueba",
+    "tests_other": "pruebas",
+    "issue": "problema",
+    "issues_other": "problemas",
+    "scanResults": "Resultados del Escaneo",
+    "exportWordError": "Error al exportar a documento Word. Por favor, intente la exportación a PDF.",
+    "identifiedRisks": "Riesgos Identificados",
+    "noRisksYet": "Aún no hay riesgos. Complete el cuestionario o ejecute el escaneo de dominio.",
+    "bestPracticesConfirmed": "Mejores Prácticas Confirmadas",
+    "noBestPracticesYet": "Aún no se han confirmado mejores prácticas.",
+    "limitations": "Limitaciones",
+    "limitationsText": "Esta herramienta estática realiza solo verificaciones del lado del cliente utilizando fuentes públicas no autenticadas. Algunas evaluaciones más profundas (validación completa de la cadena SSL, análisis exhaustivo de brechas, auditoría exhaustiva de encabezados de seguridad, exposición de puertos) requieren API del lado del servidor o autenticadas.",
+    "domainSecurityScan": "Escaneo de Seguridad del Dominio",
+    "fullSslAnalysis": "Análisis SSL/TLS completo",
+    "fullHeaderAnalysis": "Análisis completo de encabezados",
+    "wordExport": {
+      "title": "Informe de Evaluación de Riesgos de Seguridad",
+      "overallSecurityScore": "Puntuación de Seguridad General",
+      "categoryAnalysisTitle": "Análisis de Categorías",
+      "categoriesEvaluated": "categorías de seguridad evaluadas",
+      "average": "Promedio:",
+      "score": "Puntuación:",
+      "moduleScannerResults": "Resultados del Escáner Modular",
+      "executed": "Ejecutado",
+      "scannersAt": "escáneres en",
+      "summary": "Resumen:",
+      "aggregatedIssues": "Problemas Agregados",
+      "noAggregatedIssues": "No se detectaron problemas agregados.",
+      "fullHeaderAnalysisLabel": "Análisis completo de encabezados:"
+    }
+  },
+  "domainScanner": {
+    "title": "Evaluación de Dominio",
+    "description": "Ejecute verificaciones ligeras de DNS / autenticación de correo / certificados / encabezados usando fuentes públicas.",
+    "placeholder": "ejemplo.com",
+    "scanButton": "Escanear Dominio",
+    "scanning": "Escaneando...",
+    "scan": "Escanear",
+    "errors": {
+      "enterDomain": "Ingrese un dominio",
+      "invalidDomain": "Dominio inválido",
+      "scanFailed": "Falló el escaneo"
+    },
+    "scanners": "Escáneres",
+    "statusIdle": "inactivo",
+    "statusRunning": "ejecutando",
+    "statusComplete": "completo",
+    "statusError": "error",
+    "severityGood": "✓ Bien",
+    "severityInfo": "ℹ Info",
+    "severityWarning": "⚠ Advertencia",
+    "severityCritical": "⚠ Crítico",
+    "severityError": "✕ Error",
+    "dataSource": "Fuente de datos:",
+    "interpretation": "Interpretación",
+    "issues": "Problemas Detectados",
+    "aggregateResult": "Resultado Agregado",
+    "domain": "Dominio:",
+    "timestamp": "Marca de tiempo:",
+    "allIssues": "Todos los Problemas",
+    "noIssuesDetected": "✓ No se detectaron problemas - ¡Su configuración de dominio se ve bien!",
+    "disclaimer": "Aviso: Algunas verificaciones (cadena SSL completa, encabezados exhaustivos, datos de brechas) requieren backend o claves API no incluidas en esta herramienta estática gratuita.",
+    "errorPrefix": "Error:"
+  },
+  "import": {
+    "title": "Importar / Exportar Datos",
+    "description": "Use esta sección para restaurar una evaluación previa o descargar los resultados actuales.",
+    "uploadFile": "Subir Archivo JSON",
+    "or": "o",
+    "pasteJSON": "Pegue el JSON exportado aquí para importar",
+    "importButton": "Importar JSON",
+    "successImport": "✓ ¡Importación exitosa!",
+    "successFileImport": "✓ ¡Archivo importado exitosamente!",
+    "errorInvalidJSON": "✕ Formato JSON inválido",
+    "errorFileType": "Por favor seleccione un archivo JSON",
+    "errorFileSize": "Archivo demasiado grande (máx 5MB)",
+    "errorFileRead": "Error al leer el archivo"
+  },
+  "notFound": {
+    "message": "Página no encontrada - intente regresar a",
+    "home": "inicio",
+    "suffix": "para encontrar el enlace que busca."
+  },
+  "dialog": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "close": "Cerrar"
+  },
+  "resetDialog": {
+    "title": "¿Reiniciar Todos los Datos?",
+    "description": "Esto eliminará permanentemente <strong>todos</strong> sus datos, incluyendo:",
+    "allAnswers": "Todas las respuestas del cuestionario",
+    "allScans": "Todos los resultados de escaneo de dominio",
+    "riskScore": "Su puntuación de riesgo de seguridad",
+    "cannotUndo": "Esta acción no se puede deshacer.",
+    "exportTip": "💾 <strong>Consejo:</strong> Exporte sus datos primero para guardar su progreso.",
+    "exportFirstButton": "💾 Exportar Primero",
+    "resetButton": "Reiniciar Todos los Datos",
+    "exportTitle": "Exportar Antes de Reiniciar",
+    "exportDescription": "Sus datos se descargarán como un archivo JSON. Puede importarlo más tarde para restaurar su progreso.",
+    "exportAfterNote": "Después de completarse la descarga, todos los datos locales serán eliminados.",
+    "downloadResetButton": "Descargar y Reiniciar"
+  }
+}

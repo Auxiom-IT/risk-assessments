@@ -1,15 +1,21 @@
-const PageNotFound = () => (
-  <div>
-    <div className='wrapper'>
-      <section>
-        Page not found - try heading back
-        {' '}
-        <a href='/'>home</a>
-        {' '}
-        to find the link you&apos;re looking for.
-      </section>
+import { useTranslation } from 'react-i18next';
+
+const PageNotFound = () => {
+  const { t } = useTranslation('common');
+
+  return (
+    <div>
+      <div className='wrapper'>
+        <section>
+          {t('notFound.message')}
+          {' '}
+          <a href='/'>{t('notFound.home')}</a>
+          {' '}
+          {t('notFound.suffix')}
+        </section>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default PageNotFound;

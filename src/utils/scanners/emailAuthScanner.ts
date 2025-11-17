@@ -1,12 +1,13 @@
 // Email Auth scanner: SPF / DMARC / DKIM with detailed policy validation.
 
+import i18next from 'i18next';
 import { DomainScanner, ExecutedScannerResult, ScannerInterpretation, SeverityLevel } from '../../types/domainScan';
 import { fetchDNS, extractSPF, fetchDMARC, checkDKIM } from '../domainChecks';
 
 export const emailAuthScanner: DomainScanner = {
   id: 'emailAuth',
-  label: 'Email Authentication',
-  description: 'Validates SPF, DMARC, and DKIM configuration for email security',
+  label: 'emailAuth.label',
+  description: 'emailAuth.description',
   timeout: 10000, // 10 seconds - multiple DNS lookups
   dataSource: {
     name: 'Google Public DNS',
@@ -24,7 +25,7 @@ export const emailAuthScanner: DomainScanner = {
 
     // SPF Validation
     if (!spf) {
-      issues.push('No SPF record found - your domain is vulnerable to email spoofing');
+      issues.push(i18next.t('emailAuth.issues.noSPF', { ns: 'scanners' }));
     } else {
       // Check SPF policy strength
       if (spf.includes('~all')) {
@@ -33,92 +34,76 @@ export const emailAuthScanner: DomainScanner = {
       } else if (spf.includes('-all')) {
         // Hard fail can cause deliverability issues with forwarded email
         if (dmarc && (dmarc.toLowerCase().includes('p=quarantine') || dmarc.toLowerCase().includes('p=reject'))) {
-          warnings.push(
-            'SPF uses hard fail (-all) which can cause deliverability issues with forwarded emails. ' +
-            'Since you have DMARC enforcement, consider using soft fail (~all) instead - it provides ' +
-            'the same security but better deliverability. ' +
-            'See https://www.mailhardener.com/blog/why-mailhardener-recommends-spf-softfail-over-fail'
-          );
+          warnings.push(i18next.t('emailAuth.issues.spfHardFailWithDMARC', { ns: 'scanners' }));
         } else {
           // Hard fail without DMARC enforcement is actually weaker security
-          warnings.push(
-            'SPF uses hard fail (-all). For best security AND deliverability, combine soft fail (~all) ' +
-            'with DMARC enforcement (p=quarantine or p=reject)'
-          );
+          warnings.push(i18next.t('emailAuth.issues.spfHardFailNoDMARC', { ns: 'scanners' }));
         }
       } else if (spf.includes('+all')) {
-        issues.push('SPF allows all senders (+all) - this provides no protection against spoofing');
+        issues.push(i18next.t('emailAuth.issues.spfAllowAll', { ns: 'scanners' }));
       } else if (spf.includes('?all')) {
-        warnings.push('SPF uses neutral policy (?all) - consider using ~all with DMARC for protection');
+        warnings.push(i18next.t('emailAuth.issues.spfNeutral', { ns: 'scanners' }));
       } else if (!spf.includes('all')) {
-        warnings.push('SPF record missing "all" mechanism - add ~all to the end of your SPF record');
+        warnings.push(i18next.t('emailAuth.issues.spfMissingAll', { ns: 'scanners' }));
       }
       // Check for too many DNS lookups (SPF limit is 10)
       const includeCount = (spf.match(/include:/g) || []).length;
       const redirectCount = (spf.match(/redirect=/g) || []).length;
       const lookupCount = includeCount + redirectCount;
       if (lookupCount > 10) {
-        issues.push(`SPF exceeds 10 DNS lookup limit (${lookupCount} found) - will cause validation failures`);
+        issues.push(i18next.t('emailAuth.issues.spfLookupLimit', { ns: 'scanners', count: lookupCount }));
       } else if (lookupCount > 8) {
-        warnings.push(`SPF has ${lookupCount} DNS lookups - limit is 10, you're close to the maximum`);
+        warnings.push(i18next.t('emailAuth.issues.spfLookupWarning', { ns: 'scanners', count: lookupCount }));
       }
     }
 
     // DMARC Validation
     if (!dmarc) {
-      issues.push('No DMARC record found - email spoofing protection is incomplete');
+      issues.push(i18next.t('emailAuth.issues.noDMARC', { ns: 'scanners' }));
     } else {
       const dmarcLower = dmarc.toLowerCase();
 
       // Check DMARC policy
       if (dmarcLower.includes('p=none')) {
-        warnings.push('DMARC policy is "none" - monitoring only, no enforcement against spoofed emails');
+        warnings.push(i18next.t('emailAuth.issues.dmarcNone', { ns: 'scanners' }));
       } else if (dmarcLower.includes('p=quarantine')) {
         // Quarantine is good, but reject is better
-        warnings.push('DMARC policy is "quarantine" - consider upgrading to "reject" for maximum protection');
+        warnings.push(i18next.t('emailAuth.issues.dmarcQuarantine', { ns: 'scanners' }));
       } else if (dmarcLower.includes('p=reject')) {
         // Perfect! No warning needed
       } else {
-        warnings.push('DMARC policy not clearly defined - ensure p=quarantine or p=reject is set');
+        warnings.push(i18next.t('emailAuth.issues.dmarcNoPolicyDefined', { ns: 'scanners' }));
       }
 
       // Check for subdomain policy
       if (!dmarcLower.includes('sp=')) {
-        warnings.push('DMARC missing subdomain policy (sp=) - subdomains may not be protected');
+        warnings.push(i18next.t('emailAuth.issues.dmarcNoSubdomain', { ns: 'scanners' }));
       }
 
       // Check for reporting
       const hasRua = dmarcLower.includes('rua=');
       const hasRuf = dmarcLower.includes('ruf=');
       if (!hasRua && !hasRuf) {
-        warnings.push('DMARC has no reporting emails (rua/ruf) - you won\'t receive abuse reports');
+        warnings.push(i18next.t('emailAuth.issues.dmarcNoReporting', { ns: 'scanners' }));
       }
 
       // Check percentage
       if (dmarcLower.includes('pct=') && !dmarcLower.includes('pct=100')) {
         const pctMatch = dmarcLower.match(/pct=(\d+)/);
         const pct = pctMatch ? pctMatch[1] : 'unknown';
-        warnings.push(`DMARC applies to only ${pct}% of emails - consider increasing to pct=100`);
+        warnings.push(i18next.t('emailAuth.issues.dmarcPercentage', { ns: 'scanners', pct }));
       }
     }
 
     // DKIM Validation
     if (dkimSelectorsFound.length === 0) {
-      issues.push('No DKIM selectors detected - emails cannot be cryptographically verified');
-      warnings.push(
-        'Note: Checked ~40 common DKIM selectors used by major email providers. ' +
-        'Custom/random selectors cannot be discovered via DNS queries alone.'
-      );
-      warnings.push(
-        'To verify DKIM is configured, try: ' +
-        '1) Check your email provider\'s documentation for your selector name, ' +
-        '2) Use EasyDMARC\'s free DKIM Lookup tool (https://easydmarc.com/tools/dkim-lookup) to auto-detect, or ' +
-        '3) Inspect email headers from sent emails for the DKIM-Signature "s=" parameter'
-      );
+      issues.push(i18next.t('emailAuth.issues.noDKIM', { ns: 'scanners' }));
+      warnings.push(i18next.t('emailAuth.issues.dkimNote', { ns: 'scanners' }));
+      warnings.push(i18next.t('emailAuth.issues.dkimVerify', { ns: 'scanners' }));
     } else {
-      warnings.push(
-        `Found DKIM selector(s): ${dkimSelectorsFound.join(', ')}. ` +
-        'Additional selectors may exist but cannot be automatically discovered.'
+      warnings.push(i18next.t(
+        'emailAuth.issues.dkimFound',
+        { ns: 'scanners', selectors: dkimSelectorsFound.join(', ') })
       );
     }
 
@@ -132,17 +117,17 @@ export const emailAuthScanner: DomainScanner = {
     // Build aggregate message
     let aggregateMessage = '';
     if (hasSpf && hasDmarc && hasDkim && dmarcEnforced) {
-      aggregateMessage = '✓ Email authentication fully configured with enforcement';
+      aggregateMessage = i18next.t('emailAuth.aggregate.fullAuth', { ns: 'scanners' });
     } else if (hasSpf && hasDmarc && hasDkim) {
-      aggregateMessage = '⚠ Email authentication configured but DMARC not enforcing (p=none)';
+      aggregateMessage = i18next.t('emailAuth.aggregate.noEnforcement', { ns: 'scanners' });
     } else if (hasSpf || hasDmarc || hasDkim) {
       const missing = [];
       if (!hasSpf) missing.push('SPF');
       if (!hasDmarc) missing.push('DMARC');
       if (!hasDkim) missing.push('DKIM');
-      aggregateMessage = `⚠ Partial email authentication - missing: ${missing.join(', ')}`;
+      aggregateMessage = i18next.t('emailAuth.aggregate.partial', { ns: 'scanners', missing: missing.join(', ') });
     } else {
-      aggregateMessage = '✗ No email authentication configured - domain is vulnerable to spoofing';
+      aggregateMessage = i18next.t('emailAuth.aggregate.none', { ns: 'scanners' });
     }
 
     // Combine issues and warnings
@@ -201,8 +186,7 @@ export const interpretEmailAuthResult = (
   // Build recommendation based on what's missing/weak
   let recommendation = '';
   if (data?.hasSpf && data?.hasDmarc && data?.hasDkim && data?.dmarcEnforced) {
-    recommendation =
-      'Excellent! Your domain has complete email authentication protecting against spoofing and phishing.';
+    recommendation = i18next.t('emailAuth.interpretation.excellent.recommendation', { ns: 'scanners' });
   } else {
     const missing = [];
     if (!data?.hasSpf) missing.push('SPF');
@@ -210,14 +194,18 @@ export const interpretEmailAuthResult = (
     if (!data?.hasDkim) missing.push('DKIM');
 
     if (missing.length > 0) {
-      recommendation = `Configure ${missing.join(', ')} to protect your domain from email spoofing. `;
+      recommendation = i18next.t('emailAuth.interpretation.partial.recommendation', {
+        ns: 'scanners',
+        missing: missing.join(', ')
+      });
+    } else if (data?.hasDmarc && !data?.dmarcEnforced) {
+      recommendation = i18next.t('emailAuth.interpretation.upgradePolicy.recommendation', { ns: 'scanners' });
+    } else {
+      recommendation = i18next.t('emailAuth.interpretation.configured.recommendation', {
+        ns: 'scanners',
+        missing: ''
+      });
     }
-
-    if (data?.hasDmarc && !data?.dmarcEnforced) {
-      recommendation += 'Upgrade your DMARC policy from p=none to p=quarantine or p=reject for enforcement. ';
-    }
-
-    recommendation += 'Review the issues below for specific configuration improvements.';
   }
 
   return {

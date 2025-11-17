@@ -1,6 +1,7 @@
 // Framework for composing individual domain scanners for independent execution.
 // Each scanner is async and reports its own success/error state; results aggregated.
 
+import i18next from 'i18next';
 import {
   DomainScanner,
   ExecutedScannerResult,
@@ -31,7 +32,18 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, scannerLab
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`${scannerLabel} timed out after ${timeoutMs}ms`)), timeoutMs)
+      setTimeout(
+        () => {
+          // Translate the scanner label before interpolating into the error message
+          const translatedLabel = i18next.t(scannerLabel, { ns: 'scanners' });
+          reject(new Error(i18next.t('common.errors.timeout', {
+            ns: 'scanners',
+            label: translatedLabel,
+            timeout: timeoutMs
+          })));
+        },
+        timeoutMs
+      )
     )
   ]);
 };
@@ -51,8 +63,8 @@ export const interpretScannerResult = (scanner: ExecutedScannerResult): ScannerI
   if (scanner.status === 'error') {
     return {
       severity: 'error',
-      message: scanner.error || 'Scanner failed to execute',
-      recommendation: 'This check could not be completed. Please try again or check your network connection.'
+      message: scanner.error || i18next.t('common.errors.scannerFailed', { ns: 'scanners' }),
+      recommendation: i18next.t('common.errors.retryMessage', { ns: 'scanners' })
     };
   }
 
@@ -69,14 +81,18 @@ export const interpretScannerResult = (scanner: ExecutedScannerResult): ScannerI
     case 'rdap':
       return interpretRdapResult(scanner, issueCount);
     case 'sslLabs':
-      return interpretSslLabsResult(scanner, issueCount);
+      return interpretSslLabsResult(scanner);
     case 'securityHeaders':
-      return interpretSecurityHeadersResult(scanner, issueCount);
+      return interpretSecurityHeadersResult(scanner);
     default:
       return {
         severity: issueCount === 0 ? 'success' : 'warning',
-        message: issueCount === 0 ? 'Check completed successfully' : `${issueCount} issue(s) found`,
-        recommendation: issueCount === 0 ? 'No issues detected.' : 'Review the issues listed above for more details.'
+        message: issueCount === 0
+          ? i18next.t('common.interpretation.checkCompleted', { ns: 'scanners' })
+          : i18next.t('common.interpretation.issuesFound', { ns: 'scanners', count: issueCount }),
+        recommendation: issueCount === 0
+          ? i18next.t('common.interpretation.noIssuesDetected', { ns: 'scanners' })
+          : i18next.t('common.interpretation.reviewIssues', { ns: 'scanners' })
       };
   }
 };

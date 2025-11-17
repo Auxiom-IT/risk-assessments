@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppState } from '../../context/AppStateContext';
 import CategoryRadarChart from '../CategoryRadarChart';
 import Footer from '../Footer';
@@ -6,6 +7,7 @@ import Dropdown from '../Dropdown';
 
 const Questionnaire: React.FC = () => {
   const { questions, answers, setAnswer, score } = useAppState();
+  const { t } = useTranslation('common');
 
   // Calculate progress metrics
   const answeredCount = useMemo(() => {
@@ -27,10 +29,10 @@ const Questionnaire: React.FC = () => {
     <div className='panel questionnaire-panel'>
       <div className='questionnaire-header'>
         <div className='questionnaire-header-content'>
-          <h2>Security Risk Assessment</h2>
+          <h2>{t('questionnaire.title')}</h2>
         </div>
         <p className='questionnaire-subtitle'>
-          Answer each question below to evaluate your security posture. Your risk score updates in real time.
+          {t('questionnaire.subtitle')}
         </p>
       </div>
 
@@ -38,17 +40,17 @@ const Questionnaire: React.FC = () => {
       <div className='progress-section'>
         <div className='progress-stats'>
           <div className='stat-card'>
-            <div className='stat-label'>Questions Answered</div>
+            <div className='stat-label'>{t('questionnaire.questionsAnswered')}</div>
             <div className='stat-value'>{answeredCount} / {totalQuestions}</div>
-            <div className='stat-subtitle'>{progressPercent}% Complete</div>
+            <div className='stat-subtitle'>{t('questionnaire.complete', { percent: progressPercent })}</div>
           </div>
           <div className={`stat-card score-card ${getScoreColor(score.percent)}`}>
-            <div className='stat-label'>Overall Security Score</div>
+            <div className='stat-label'>{t('questionnaire.overallScore')}</div>
             <div className='stat-value-large'>{score.percent}%</div>
             <div className='stat-subtitle'>
-              {score.percent >= 80 ? 'Excellent' :
-               score.percent >= 60 ? 'Good' :
-               score.percent >= 40 ? 'Fair' : 'Needs Improvement'}
+              {score.percent >= 80 ? t('status.excellent') :
+               score.percent >= 60 ? t('status.good') :
+               score.percent >= 40 ? t('status.fair') : t('status.needsImprovement')}
             </div>
           </div>
         </div>
@@ -70,7 +72,7 @@ const Questionnaire: React.FC = () => {
               value={answers[q.id] || ''}
               onChange={(value) => setAnswer(q.id, value)}
               options={q.options}
-              placeholder="Select an answer..."
+              placeholder={t('questionnaire.selectAnswer')}
             />
           </div>
         ))}
@@ -78,9 +80,9 @@ const Questionnaire: React.FC = () => {
 
       {/* Category Breakdown with Radar Chart */}
       <div className='category-breakdown-modern'>
-        <h3>Category Analysis</h3>
+        <h3>{t('questionnaire.categoryAnalysis')}</h3>
         <p className='section-subtitle'>
-          Visual breakdown of your security posture across key domains
+          {t('questionnaire.categoryBreakdown')}
         </p>
         <CategoryRadarChart categories={score.categories} />
 

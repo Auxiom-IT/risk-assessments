@@ -7,6 +7,8 @@ interface ExportReportOptions {
   risks: string[];
   bestPractices: string[];
   domainScanAggregate?: DomainScanAggregate;
+  t: (key: string) => string; // Translation function (common namespace)
+  tScanners: (key: string) => string; // Translation function (scanners namespace)
 }
 
 /**
@@ -14,13 +16,13 @@ interface ExportReportOptions {
  * Resolves CSS variables from document root for consistent styling
  */
 export const generateWordHTML = (options: ExportReportOptions): string => {
-  const { score, risks, domainScanAggregate } = options;
+  const { score, risks, domainScanAggregate, t, tScanners } = options;
 
   const scoreValue = score.percent;
-  const scoreLabel = scoreValue >= 80 ? 'Excellent Security Posture' :
-                    scoreValue >= 60 ? 'Good Security Posture' :
-                    scoreValue >= 40 ? 'Fair - Improvements Needed' :
-                    'Critical - Immediate Action Required';
+  const scoreLabel = scoreValue >= 80 ? t('report.scoreExcellent') :
+                    scoreValue >= 60 ? t('report.scoreGood') :
+                    scoreValue >= 40 ? t('report.scoreFair') :
+                    t('report.scorePoor');
 
   // Resolve CSS variable colors from the root so user customization flows into export.
   const rootStyles = getComputedStyle(document.documentElement);
@@ -50,7 +52,7 @@ export const generateWordHTML = (options: ExportReportOptions): string => {
       xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
   <meta charset='utf-8'>
-  <title>Security Risk Assessment Report</title>
+  <title>${t('report.wordExport.title')}</title>
   <style>
     body { font-family: Calibri, Arial, sans-serif; line-height:1.6; color:${colorTextPrimary};
            max-width:800px; margin:20px auto; padding:20px; background:${pageBg}; }
@@ -87,21 +89,27 @@ export const generateWordHTML = (options: ExportReportOptions): string => {
   </style>
 </head>
 <body>
-  <h1>Security Risk Assessment Report</h1>
+  <h1>${t('report.wordExport.title')}</h1>
   <div class="score-section">
-    <h2>Overall Security Score</h2>
+    <h2>${t('report.wordExport.overallSecurityScore')}</h2>
     <div class="score-value" style="${getColorStyle(scoreValue)}">${scoreValue}%</div>
     <div class="score-label">${scoreLabel}</div>
   </div>
-  <h2>Category Analysis</h2>
-  <p class="summary">${score.categories.length} security categories evaluated | Average: ${avgScore}%</p>`;
+  <h2>${t('report.wordExport.categoryAnalysisTitle')}</h2>
+  <p class="summary">
+    ${score.categories.length} ${t('report.wordExport.categoriesEvaluated')}
+    ${' | '}
+    ${t('report.wordExport.average')} ${avgScore}%
+  </p>`;
 
   // Add categories
   score.categories.forEach((cat) => {
     htmlContent += `
   <div class="category">
     <div class="category-name">${cat.category}</div>
-    <div class="category-score" style="${getColorStyle(cat.percent)}">Score: ${cat.percent}%</div>
+    <div class="category-score" style="${getColorStyle(cat.percent)}">
+      ${t('report.wordExport.score')} ${cat.percent}%
+    </div>
   </div>
 `;
   });
@@ -109,20 +117,31 @@ export const generateWordHTML = (options: ExportReportOptions): string => {
   // Modular Scanner Aggregate
   if (domainScanAggregate) {
     htmlContent += '\n  <div class="scanner-section">' +
-      `\n    <h2>Modular Scanner Results (${domainScanAggregate.domain})</h2>` +
-      `\n    <p class="scanner-meta">Executed ${domainScanAggregate.scanners.length} scanners at ` +
-      `${new Date(domainScanAggregate.timestamp).toLocaleString()}.</p>`;
+      `\n    <h2>${t('report.wordExport.moduleScannerResults')} (${domainScanAggregate.domain})</h2>` +
+      `\n    <p class="scanner-meta">${t('report.wordExport.executed')} ${domainScanAggregate.scanners.length} ` +
+      `${t('report.wordExport.scannersAt')} ${new Date(domainScanAggregate.timestamp).toLocaleString()}.</p>`;
     domainScanAggregate.scanners.forEach((sc) => {
       const interpretation = interpretScannerResult(sc);
       const statusClass = `scanner-status-${sc.status}`;
+      // Translate scanner label, status, and error messages
+      const translatedLabel = tScanners(sc.label);
+      const translatedStatus = tScanners(`common.status.${sc.status}`);
       htmlContent += '\n    <div class="scanner-item">' +
-        `\n      <h4>${sc.label} <span class="${statusClass}">[${sc.status}]</span></h4>`;
+        `\n      <h4>${translatedLabel} <span class="${statusClass}">[${translatedStatus}]</span></h4>`;
       if (sc.summary) {
-        htmlContent += `      <div><strong>Summary:</strong> ${sc.summary}</div>`;
+        htmlContent += `      <div><strong>${t('report.wordExport.summary')}</strong> ${sc.summary}</div>`;
       }
       if (interpretation) {
+        // Translate any scanner label keys that appear in error messages
+        let message = interpretation.message;
+        let recommendation = interpretation.recommendation;
+        // Replace any .label keys with their translations
+        const labelKeyRegex = /(\w+)\.label/g;
+        message = message.replace(labelKeyRegex, (match, key) => tScanners(`${key}.label`));
+        recommendation = recommendation.replace(labelKeyRegex, (match, key) => tScanners(`${key}.label`));
+        
         htmlContent += '      <div class="scanner-interpretation"><strong>' +
-          `${interpretation.message}</strong><br/>${interpretation.recommendation}</div>`;
+          `${message}</strong><br/>${recommendation}</div>`;
       }
       if (sc.issues && sc.issues.length > 0) {
         htmlContent += '      <ul class="issues-list">';
@@ -134,27 +153,27 @@ export const generateWordHTML = (options: ExportReportOptions): string => {
       // External link for security headers if present
       if (sc.id === 'securityHeaders' && sc.data && (sc.data as { testUrl?: string }).testUrl) {
         const testUrl = (sc.data as { testUrl?: string }).testUrl;
-        htmlContent += '      <div class="ext-link">Full header analysis: <a href="' +
+        htmlContent += `      <div class="ext-link">${t('report.wordExport.fullHeaderAnalysisLabel')} <a href="` +
           `${testUrl}">${testUrl}</a></div>`;
       }
       htmlContent += '    </div>';
     });
     if (domainScanAggregate.issues.length > 0) {
-      htmlContent += '\n    <h3>Aggregated Issues</h3>\n    <ul>';
+      htmlContent += `\n    <h3>${t('report.wordExport.aggregatedIssues')}</h3>\n    <ul>`;
       domainScanAggregate.issues.forEach((i) => {
         htmlContent += `      <li>${i}</li>`;
       });
       htmlContent += '    </ul>';
     } else {
-      htmlContent += '\n    <p><em>No aggregated issues detected.</em></p>';
+      htmlContent += `\n    <p><em>${t('report.wordExport.noAggregatedIssues')}</em></p>`;
     }
     htmlContent += '\n  </div>';
   }
 
   // Identified Risks
-  htmlContent += '\n  <h2>Identified Risks</h2>\n';
+  htmlContent += `\n  <h2>${t('report.identifiedRisks')}</h2>\n`;
   if (risks.length === 0) {
-    htmlContent += '  <p><em>No risks yet. Complete questionnaire or run domain scan.</em></p>\n';
+    htmlContent += `  <p><em>${t('report.noRisksYet')}</em></p>\n`;
   } else {
     htmlContent += '  <ul>\n';
     risks.forEach((risk) => {
@@ -164,9 +183,9 @@ export const generateWordHTML = (options: ExportReportOptions): string => {
   }
 
   // Best Practices Confirmed
-  htmlContent += '\n  <h2>Best Practices Confirmed</h2>\n';
+  htmlContent += `\n  <h2>${t('report.bestPracticesConfirmed')}</h2>\n`;
   if (options.bestPractices.length === 0) {
-    htmlContent += '  <p><em>No best practices confirmed yet.</em></p>\n';
+    htmlContent += `  <p><em>${t('report.noBestPracticesYet')}</em></p>\n`;
   } else {
     htmlContent += '  <ul>\n';
     options.bestPractices.forEach((bp) => {
@@ -177,10 +196,8 @@ export const generateWordHTML = (options: ExportReportOptions): string => {
 
   // Limitations
   htmlContent += '\n  <div class="limitations">' +
-    '\n    <h2>Limitations</h2>' +
-    '\n    <p>This static tool performs only client-side checks using public unauthenticated sources. ' +
-    'Some deeper assessments (full SSL chain validation, comprehensive breach analysis, ' +
-    'exhaustive security header audit, port exposure) require server-side or authenticated APIs.</p>' +
+    `\n    <h2>${t('report.limitations')}</h2>` +
+    `\n    <p>${t('report.limitationsText')}</p>` +
     '\n  </div>\n</body>\n</html>';
 
   return htmlContent;

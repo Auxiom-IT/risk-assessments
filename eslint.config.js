@@ -48,6 +48,7 @@ export default [
         afterEach: 'readonly',
         beforeAll: 'readonly',
         afterAll: 'readonly',
+        i18next: 'readonly',
       },
       parserOptions: {
         ecmaVersion: 'latest',

@@ -127,6 +127,23 @@ export const validateImportJSON = (jsonString: string): ValidationResult => {
 
   const obj = parsed as Record<string, unknown>;
 
+  // Validate version field if present (optional, for versioned exports)
+  if (obj.version !== undefined) {
+    if (typeof obj.version !== 'number') {
+      return {
+        isValid: false,
+        error: 'Version must be a number'
+      };
+    }
+
+    if (obj.version < 1 || obj.version > 2) {
+      return {
+        isValid: false,
+        error: 'Unsupported version (must be 1 or 2)'
+      };
+    }
+  }
+
   // Validate expected structure
   let hasValidData = false;
 

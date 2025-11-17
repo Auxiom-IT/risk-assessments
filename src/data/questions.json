@@ -131,10 +131,11 @@
       "id": "system_data_protection_q25",
       "category": "system_data_protection",
       "options": [
-        { "id": "opt0", "points": 50 },
-        { "id": "opt1", "points": 33 },
-        { "id": "opt2", "points": 67 },
-        { "id": "opt3", "points": 100 }
+        { "id": "opt0", "points": 0 },
+        { "id": "opt1", "points": 25 },
+        { "id": "opt2", "points": 50 },
+        { "id": "opt3", "points": 75 },
+        { "id": "opt4", "points": 100 }
       ]
     },
     {

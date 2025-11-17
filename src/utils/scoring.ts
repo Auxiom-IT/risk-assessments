@@ -22,7 +22,7 @@ export const computeScore = (answers: Record<string, string>, questions: Questio
   for (const q of questions) {
     const questionMax = Math.max(...q.options.map((o) => o.points));
     max += questionMax;
-    const key = q.categoryKey || q.category; // Use categoryKey for grouping
+    const key = q.categoryKey ?? q.category; // Use categoryKey for grouping
     if (!categoryScoreMap[key]) categoryScoreMap[key] = { total: 0, max: 0, displayName: q.category };
     categoryScoreMap[key].max += questionMax;
 

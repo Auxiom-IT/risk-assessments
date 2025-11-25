@@ -2,6 +2,59 @@ import { generateWordHTML, exportToWord } from './exportReport';
 import type { ScoreResult } from './scoring';
 import type { DomainScanAggregate } from '../types/domainScan';
 
+// Mock translation function
+const mockT = (key: string): string => {
+  const translations: Record<string, string> = {
+    'report.scoreExcellent': 'Excellent Security Posture',
+    'report.scoreGood': 'Good Security Posture',
+    'report.scoreFair': 'Fair - Improvements Needed',
+    'report.scorePoor': 'Critical - Immediate Action Required',
+    'report.wordExport.title': 'Security Risk Assessment Report',
+    'report.wordExport.overallSecurityScore': 'Overall Security Score',
+    'report.wordExport.categoryAnalysisTitle': 'Category Analysis',
+    'report.wordExport.categoriesEvaluated': 'security categories evaluated',
+    'report.wordExport.average': 'Average:',
+    'report.wordExport.score': 'Score:',
+    'report.wordExport.moduleScannerResults': 'Modular Scanner Results',
+    'report.wordExport.executed': 'Executed',
+    'report.wordExport.scannersAt': 'scanners at',
+    'report.wordExport.summary': 'Summary:',
+    'report.wordExport.aggregatedIssues': 'Aggregated Issues',
+    'report.wordExport.noAggregatedIssues': 'No aggregated issues detected.',
+    'report.wordExport.fullHeaderAnalysisLabel': 'Full header analysis:',
+    'report.identifiedRisks': 'Identified Risks',
+    'report.noRisksYet': 'No risks yet. Complete questionnaire or run domain scan.',
+    'report.bestPracticesConfirmed': 'Best Practices Confirmed',
+    'report.noBestPracticesYet': 'No best practices confirmed yet.',
+    'report.limitations': 'Limitations',
+    // eslint-disable-next-line max-len
+    'report.limitationsText': 'This static tool performs only client-side checks using public unauthenticated sources. Some deeper assessments (full SSL chain validation, comprehensive breach analysis, exhaustive security header audit, port exposure) require server-side or authenticated APIs.'
+  };
+  return translations[key] || key;
+};
+
+// Mock scanners translation function
+const mockTScanners = (key: string): string => {
+  const translations: Record<string, string> = {
+    'dns.label': 'DNS Records',
+    'emailAuth.label': 'Email Authentication',
+    'certificates.label': 'SSL/TLS Certificates',
+    'rdap.label': 'Domain Registration (RDAP)',
+    'sslLabs.label': 'SSL/TLS Configuration',
+    'securityHeaders.label': 'Security Headers',
+    'common.errors.timeout': '{{label}} timed out after {{timeout}}ms',
+    'common.errors.scannerFailed': 'Scanner failed to execute',
+    // eslint-disable-next-line max-len
+    'common.errors.retryMessage': 'This check could not be completed. Please try again or check your network connection.'
+  };
+  // Simple interpolation for testing
+  let result = translations[key] || key;
+  if (key === 'common.errors.timeout') {
+    result = result.replace('{{label}}', 'Test Scanner').replace('{{timeout}}', '30000');
+  }
+  return result;
+};
+
 // Mock getComputedStyle
 const mockGetComputedStyle = vi.fn(() => ({
   getPropertyValue: vi.fn((prop: string) => {
@@ -43,7 +96,9 @@ describe('exportReport', () => {
       const html = generateWordHTML({
         score: sampleScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('<!DOCTYPE html>');
@@ -57,7 +112,9 @@ describe('exportReport', () => {
       const html = generateWordHTML({
         score: sampleScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('Access Management');
@@ -71,7 +128,9 @@ describe('exportReport', () => {
       const html = generateWordHTML({
         score: sampleScore,
         risks,
-        bestPractices: ['Follow best practice A', 'Implement best practice B']
+        bestPractices: ['Follow best practice A', 'Implement best practice B'],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('Identified Risks');
@@ -86,7 +145,9 @@ describe('exportReport', () => {
       const html = generateWordHTML({
         score: sampleScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('Identified Risks');
@@ -115,7 +176,9 @@ describe('exportReport', () => {
         score: sampleScore,
         risks: [],
         bestPractices: [],
-        domainScanAggregate: aggregate
+        domainScanAggregate: aggregate,
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('Modular Scanner Results');
@@ -146,7 +209,9 @@ describe('exportReport', () => {
         score: sampleScore,
         risks: [],
         bestPractices: [],
-        domainScanAggregate: aggregate
+        domainScanAggregate: aggregate,
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('Missing DMARC record');
@@ -179,7 +244,9 @@ describe('exportReport', () => {
         score: sampleScore,
         risks: [],
         bestPractices: [],
-        domainScanAggregate: aggregate
+        domainScanAggregate: aggregate,
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('https://securityheaders.com/?q=test.com');
@@ -190,7 +257,9 @@ describe('exportReport', () => {
       const html = generateWordHTML({
         score: sampleScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('Limitations');
@@ -202,7 +271,9 @@ describe('exportReport', () => {
       const html = generateWordHTML({
         score: sampleScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(mockGetComputedStyle).toHaveBeenCalled();
@@ -223,7 +294,9 @@ describe('exportReport', () => {
       const html = generateWordHTML({
         score: excellentScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('90%');
@@ -241,7 +314,9 @@ describe('exportReport', () => {
       const html = generateWordHTML({
         score: poorScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(html).toContain('30%');
@@ -264,7 +339,7 @@ describe('exportReport', () => {
       BlobConstructorSpy = vi.fn();
       class MockBlob {
         constructor(parts: unknown[], options?: { type?: string }) {
-          BlobConstructorSpy(parts, options);
+          new BlobConstructorSpy(parts, options);
           return { parts, options, type: options?.type } as unknown as Blob;
         }
       }
@@ -289,7 +364,9 @@ describe('exportReport', () => {
       exportToWord({
         score: sampleScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(BlobConstructorSpy).toHaveBeenCalledWith(
@@ -302,7 +379,9 @@ describe('exportReport', () => {
       exportToWord({
         score: sampleScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(mockClick).toHaveBeenCalled();
@@ -312,7 +391,9 @@ describe('exportReport', () => {
       exportToWord({
         score: sampleScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(mockCreateObjectURL).toHaveBeenCalled();
@@ -323,7 +404,9 @@ describe('exportReport', () => {
       exportToWord({
         score: sampleScore,
         risks: [],
-        bestPractices: []
+        bestPractices: [],
+        t: mockT,
+        tScanners: mockTScanners,
       });
 
       expect(mockClick).toHaveBeenCalledTimes(1);

@@ -1,0 +1,216 @@
+{
+  "app": {
+    "title": "Risk Assessment Tool",
+    "loading": "Loading..."
+  },
+  "navigation": {
+    "home": "Home",
+    "questionnaire": "Questionnaire",
+    "report": "Report",
+    "domainScan": "Domain Scan",
+    "themeLight": "☀️ Light",
+    "themeDark": "🌙 Dark"
+  },
+  "footer": {
+    "builtBy": "Built with ❤️ by",
+    "blacksmith": "Blacksmith InfoSec",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact Us",
+    "freeAndOpenSource": "This tool is free to use and",
+    "openSource": "open source",
+    "haveSuggestion": "Have a suggestion or found a bug?",
+    "letUsKnow": "Let us know",
+    "selectLanguage": "Select language",
+    "languageEnglish": "English",
+    "languageSpanish": "Español"
+  },
+  "buttons": {
+    "start": "Start Assessment",
+    "continue": "Continue",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "reset": "Reset",
+    "export": "Export",
+    "print": "Print",
+    "scan": "Scan",
+    "clear": "Clear",
+    "import": "Import"
+  },
+  "status": {
+    "excellent": "Excellent",
+    "good": "Good",
+    "fair": "Fair",
+    "needsImprovement": "Needs Improvement",
+    "loading": "Loading...",
+    "scanning": "Scanning...",
+    "complete": "Complete",
+    "error": "Error"
+  },
+  "errors": {
+    "generic": "An error occurred. Please try again.",
+    "notFound": "Page not found",
+    "invalidInput": "Invalid input",
+    "required": "This field is required"
+  },
+  "home": {
+    "title": "Risk Assessment",
+    "subtitle": "Free, private, and fast security posture check",
+    "description": "Evaluate your organization's cybersecurity readiness with our comprehensive questionnaire and domain scanning tool.",
+    "getStarted": "Get Started",
+    "questionnaireDescription": "Answer structured security questions for a quick baseline.",
+    "domainScanDescription": "Run automated DNS, email, and certificate checks.",
+    "reportDescription": "View risk score, remediation guidance, and export results.",
+    "importDescription": "Restore a saved assessment securely.",
+    "privacyNote": "Data is stored locally in your browser. No answers or scans are transmitted to a server.",
+    "features": {
+      "title": "Features",
+      "free": {
+        "title": "100% Free",
+        "description": "No cost, no credit card required. Full access to all features."
+      },
+      "private": {
+        "title": "Completely Private",
+        "description": "Your data stays in your browser. No tracking, no server storage."
+      },
+      "fast": {
+        "title": "Fast Results",
+        "description": "Get your security assessment in minutes, not days."
+      },
+      "comprehensive": {
+        "title": "Comprehensive",
+        "description": "Covers all major security domains and best practices."
+      }
+    }
+  },
+  "questionnaire": {
+    "title": "Security Risk Assessment",
+    "subtitle": "Answer each question below to evaluate your security posture. Your risk score updates in real time.",
+    "questionsAnswered": "Questions Answered",
+    "complete": "{{percent}}% Complete",
+    "overallScore": "Overall Security Score",
+    "categoryAnalysis": "Category Analysis",
+    "categoryBreakdown": "Visual breakdown of your security posture across key domains",
+    "selectAnswer": "Select an answer..."
+  },
+  "report": {
+    "title": "Security Risk Report",
+    "overallScore": "Overall Security Score",
+    "categoryAnalysis": "Category Analysis",
+    "recommendations": "Recommendations",
+    "domainScanResults": "Domain Security Scan",
+    "exportWord": "Export Word",
+    "exportJSON": "Export JSON",
+    "print": "Print",
+    "scoreExcellent": "Excellent Security Posture",
+    "scoreGood": "Good Security Posture",
+    "scoreFair": "Fair - Improvements Needed",
+    "scorePoor": "Critical - Immediate Action Required",
+    "tests": "test",
+    "tests_other": "tests",
+    "issue": "issue",
+    "issues_other": "issues",
+    "scanResults": "Scan Results",
+    "exportWordError": "Failed to export to Word document. Please try the PDF export instead.",
+    "identifiedRisks": "Identified Risks",
+    "noRisksYet": "No risks yet. Complete questionnaire or run domain scan.",
+    "bestPracticesConfirmed": "Best Practices Confirmed",
+    "noBestPracticesYet": "No best practices confirmed yet.",
+    "limitations": "Limitations",
+    "limitationsText": "This static tool performs only client-side checks using public unauthenticated sources. Some deeper assessments (full SSL chain validation, comprehensive breach analysis, exhaustive security header audit, port exposure) require server-side or authenticated APIs.",
+    "domainSecurityScan": "Domain Security Scan",
+    "fullSslAnalysis": "Full SSL/TLS analysis",
+    "fullHeaderAnalysis": "Full header analysis",
+    "wordExport": {
+      "title": "Security Risk Assessment Report",
+      "overallSecurityScore": "Overall Security Score",
+      "categoryAnalysisTitle": "Category Analysis",
+      "categoriesEvaluated": "security categories evaluated",
+      "average": "Average:",
+      "score": "Score:",
+      "moduleScannerResults": "Modular Scanner Results",
+      "executed": "Executed",
+      "scannersAt": "scanners at",
+      "summary": "Summary:",
+      "aggregatedIssues": "Aggregated Issues",
+      "noAggregatedIssues": "No aggregated issues detected.",
+      "fullHeaderAnalysisLabel": "Full header analysis:"
+    }
+  },
+  "domainScanner": {
+    "title": "Domain Assessment",
+    "description": "Run lightweight DNS / email auth / certificate / header checks using public sources.",
+    "placeholder": "example.com",
+    "scanButton": "Scan Domain",
+    "scanning": "Scanning...",
+    "scan": "Scan",
+    "errors": {
+      "enterDomain": "Enter a domain",
+      "invalidDomain": "Invalid domain",
+      "scanFailed": "Scan failed"
+    },
+    "scanners": "Scanners",
+    "statusIdle": "idle",
+    "statusRunning": "running",
+    "statusComplete": "complete",
+    "statusError": "error",
+    "severityGood": "✓ Good",
+    "severityInfo": "ℹ Info",
+    "severityWarning": "⚠ Warning",
+    "severityCritical": "⚠ Critical",
+    "severityError": "✕ Error",
+    "dataSource": "Data source:",
+    "interpretation": "Interpretation",
+    "issues": "Issues Detected",
+    "aggregateResult": "Aggregate Result",
+    "domain": "Domain:",
+    "timestamp": "Timestamp:",
+    "allIssues": "All Issues",
+    "noIssuesDetected": "✓ No issues detected - Your domain configuration looks good!",
+    "disclaimer": "Disclaimer: Some checks (full SSL chain, exhaustive headers, breach data) require backend or API keys not included in this free static tool.",
+    "errorPrefix": "Error:"
+  },
+  "import": {
+    "title": "Data Import / Export",
+    "description": "Use this section to restore a previous assessment or download current results.",
+    "uploadFile": "Upload JSON File",
+    "or": "or",
+    "pasteJSON": "Paste exported JSON here to import",
+    "importButton": "Import JSON",
+    "successImport": "✓ Import successful!",
+    "successFileImport": "✓ File imported successfully!",
+    "errorInvalidJSON": "✕ Invalid JSON format",
+    "errorFileType": "Please select a JSON file",
+    "errorFileSize": "File is too large (max 5MB)",
+    "errorFileRead": "Error reading file"
+  },
+  "notFound": {
+    "message": "Page not found - try heading back",
+    "home": "home",
+    "suffix": "to find the link you're looking for."
+  },
+  "dialog": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close"
+  },
+  "resetDialog": {
+    "title": "Reset All Data?",
+    "description": "This will permanently clear <strong>all</strong> of your data including:",
+    "allAnswers": "All questionnaire answers",
+    "allScans": "All domain scan results",
+    "riskScore": "Your security risk score",
+    "cannotUndo": "This action cannot be undone.",
+    "exportTip": "💾 <strong>Tip:</strong> Export your data first to save your progress.",
+    "exportFirstButton": "💾 Export First",
+    "resetButton": "Reset All Data",
+    "exportTitle": "Export Before Reset",
+    "exportDescription": "Your data will be downloaded as a JSON file. You can import it later to restore your progress.",
+    "exportAfterNote": "After the download completes, all local data will be cleared.",
+    "downloadResetButton": "Download & Reset"
+  }
+}

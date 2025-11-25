@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ResetDialogProps {
   isOpen: boolean;
@@ -13,8 +14,9 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
   onCancel,
   onReset,
   onExportAndReset,
-  hasData
+  hasData,
 }) => {
+  const { t } = useTranslation('common');
   const [step, setStep] = useState<'confirm' | 'export'>('confirm');
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -89,37 +91,33 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
     <dialog ref={dialogRef} className='modal-content' aria-labelledby='dialog-title'>
       {step === 'confirm' && (
         <>
-          <h3 id='dialog-title'>Reset All Data?</h3>
-          <p>
-            This will permanently clear <strong>all</strong> of your data including:
-          </p>
+          <h3 id='dialog-title'>{t('resetDialog.title')}</h3>
+          <p dangerouslySetInnerHTML={{ __html: t('resetDialog.description') }} />
           <ul>
-            <li>All questionnaire answers</li>
-            <li>All domain scan results</li>
-            <li>Your security risk score</li>
+            <li>{t('resetDialog.allAnswers')}</li>
+            <li>{t('resetDialog.allScans')}</li>
+            <li>{t('resetDialog.riskScore')}</li>
           </ul>
           <p>
-            <strong>This action cannot be undone.</strong>
+            <strong>{t('resetDialog.cannotUndo')}</strong>
           </p>
           {hasData && (
-            <p className='warning'>
-              💾 <strong>Tip:</strong> Export your data first to save your progress.
-            </p>
+            <p className='warning' dangerouslySetInnerHTML={{ __html: t('resetDialog.exportTip') }} />
           )}
           <div className='modal-actions'>
             <button className='btn-secondary' onClick={handleClose}>
-              Cancel
+              {t('buttons.cancel')}
             </button>
             {hasData && (
               <button
                 className='toggle-btn'
                 onClick={() => setStep('export')}
               >
-                💾 Export First
+                {t('resetDialog.exportFirstButton')}
               </button>
             )}
             <button className='btn-danger' onClick={handleResetWithoutExport}>
-              Reset All Data
+              {t('resetDialog.resetButton')}
             </button>
           </div>
         </>
@@ -127,22 +125,18 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
 
       {step === 'export' && (
         <>
-          <h3 id='dialog-title'>Export Before Reset</h3>
-          <p>
-            Your data will be downloaded as a JSON file. You can import it later to restore your progress.
-          </p>
-          <p>
-            After the download completes, all local data will be cleared.
-          </p>
+          <h3 id='dialog-title'>{t('resetDialog.exportTitle')}</h3>
+          <p>{t('resetDialog.exportDescription')}</p>
+          <p>{t('resetDialog.exportAfterNote')}</p>
           <div className='modal-actions'>
             <button className='btn-secondary' onClick={() => setStep('confirm')}>
-              Back
+              {t('buttons.back')}
             </button>
             <button
               className='btn-danger'
               onClick={handleExportAndReset}
             >
-              Download & Reset
+              {t('resetDialog.downloadResetButton')}
             </button>
           </div>
         </>

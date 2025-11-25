@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppState } from '../../context/AppStateContext';
 import CategoryRadarChart from '../CategoryRadarChart';
 import { interpretScannerResult } from '../../utils/scanners';
@@ -9,6 +10,8 @@ import { renderIssueWithLinks } from '../../utils/text';
 import Footer from '../Footer';
 
 const Report: React.FC = () => {
+  const { t } = useTranslation('common');
+  const { t: tScanners } = useTranslation('scanners');
   const { score, risks, bestPractices, domainScanAggregate, exportJSON } = useAppState();
   const reportRef = useRef<HTMLDivElement | null>(null);
 
@@ -30,12 +33,12 @@ const Report: React.FC = () => {
         score,
         risks,
         bestPractices,
-        domainScanAggregate
+        domainScanAggregate,
+        t,
+        tScanners
       });
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error exporting to Word:', error);
-      alert('Failed to export to Word document. Please try the PDF export instead.');
+      alert(t('report.exportWordError'));
     }
   };
 
@@ -49,33 +52,33 @@ const Report: React.FC = () => {
 
   return (
     <div className='panel report-panel'>
-      <h2>Security Risk Report</h2>
+      <h2>{t('report.title')}</h2>
       <div className='export-actions'>
         <TrackedButton trackingName='export_word' onClick={onExportDOCX}>
-          Export Word
+          {t('report.exportWord')}
         </TrackedButton>
         <TrackedButton trackingName='export_json' onClick={onExportJSON}>
-          Export JSON
+          {t('report.exportJSON')}
         </TrackedButton>
         <TrackedButton trackingName='print_report' onClick={printScreen}>
-          Print
+          {t('report.print')}
         </TrackedButton>
       </div>
       <div ref={reportRef} className='report-content'>
         <section className='report-score-section'>
-          <h3>Overall Security Score</h3>
+          <h3>{t('report.overallScore')}</h3>
           <div className={`report-score-display ${getScoreColor(score.percent)}`}>
             <div className='report-score-value'>{score.percent}%</div>
             <div className='report-score-label'>
-              {score.percent >= 80 ? 'Excellent Security Posture' :
-               score.percent >= 60 ? 'Good Security Posture' :
-               score.percent >= 40 ? 'Fair - Improvements Needed' : 'Critical - Immediate Action Required'}
+              {score.percent >= 80 ? t('report.scoreExcellent') :
+               score.percent >= 60 ? t('report.scoreGood') :
+               score.percent >= 40 ? t('report.scoreFair') : t('report.scorePoor')}
             </div>
           </div>
         </section>
 
         <section className='report-categories-section'>
-          <h3>Category Analysis</h3>
+          <h3>{t('report.categoryAnalysis')}</h3>
           <CategoryRadarChart categories={score.categories} />
 
           <div className='category-details'>
@@ -98,7 +101,7 @@ const Report: React.FC = () => {
 
         {domainScanAggregate && (
           <section>
-            <h3>Domain Security Scan</h3>
+            <h3>{t('report.domainSecurityScan')}</h3>
             <div className='scanner-summary'>
               <p className='scanner-summary-line'>
                 <strong>{domainScanAggregate.domain}</strong>
@@ -115,14 +118,14 @@ const Report: React.FC = () => {
               </p>
             </div>
 
-            <h4>Scan Results</h4>
+            <h4>{t('report.scanResults')}</h4>
             <div className='scanner-results-grid'>
               {domainScanAggregate.scanners.map((sc) => {
                 const interp = interpretScannerResult(sc);
                 return (
                   <div key={sc.id} className={`scanner-card scanner-card-${sc.status}`}>
                     <div className='scanner-card-header'>
-                      <span className='scanner-card-title'>{sc.label}</span>
+                      <span className='scanner-card-title'>{tScanners(sc.label)}</span>
                       <span className={`scanner-card-status scanner-card-status-${sc.status}`}>{sc.status}</span>
                     </div>
                     {sc.summary && <div className='scanner-card-summary'>{sc.summary}</div>}
@@ -142,7 +145,7 @@ const Report: React.FC = () => {
                           target='_blank'
                           rel='noopener noreferrer'
                         >
-                          Full SSL/TLS analysis ↗
+                          {t('report.fullSslAnalysis')} ↗
                         </TrackedLink>
                       </div>
                     ) : null}
@@ -153,7 +156,7 @@ const Report: React.FC = () => {
                           target='_blank'
                           rel='noopener noreferrer'
                         >
-                          Full header analysis ↗
+                          {t('report.fullHeaderAnalysis')} ↗
                         </TrackedLink>
                       </div>
                     ) : null}
@@ -164,8 +167,8 @@ const Report: React.FC = () => {
           </section>
         )}
         <section>
-          <h3>Identified Risks</h3>
-          {risks.length === 0 && <p>No risks yet. Complete questionnaire or run domain scan.</p>}
+          <h3>{t('report.identifiedRisks')}</h3>
+          {risks.length === 0 && <p>{t('report.noRisksYet')}</p>}
           {risks.length > 0 && (
             <ul className='risks'>
               {risks.map((r) => (
@@ -177,8 +180,8 @@ const Report: React.FC = () => {
           )}
         </section>
         <section>
-          <h3>Best Practices Confirmed</h3>
-          {bestPractices.length === 0 && <p>No best practices confirmed yet.</p>}
+          <h3>{t('report.bestPracticesConfirmed')}</h3>
+          {bestPractices.length === 0 && <p>{t('report.noBestPracticesYet')}</p>}
           {bestPractices.length > 0 && (
             <ul className='best-practices'>
               {bestPractices.map((bp) => (
@@ -190,12 +193,8 @@ const Report: React.FC = () => {
           )}
         </section>
         <section className='limitations'>
-          <h3>Limitations</h3>
-          <p>
-            This static tool performs only client-side checks using public unauthenticated sources. Some deeper
-            assessments (full SSL chain validation, comprehensive breach analysis, exhaustive security header audit,
-            port exposure) require server-side or authenticated APIs.
-          </p>
+          <h3>{t('report.limitations')}</h3>
+          <p>{t('report.limitationsText')}</p>
         </section>
       </div>
       <Footer />

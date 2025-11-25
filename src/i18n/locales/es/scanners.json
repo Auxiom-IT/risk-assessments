@@ -1,0 +1,299 @@
+{
+  "common": {
+    "status": {
+      "idle": "inactivo",
+      "running": "ejecutando",
+      "complete": "completado",
+      "error": "error"
+    },
+    "errors": {
+      "timeout": "{{label}} expiró después de {{timeout}}ms",
+      "scannerFailed": "El escáner falló al ejecutarse",
+      "retryMessage": "Esta verificación no pudo completarse. Por favor, inténtelo de nuevo o verifique su conexión de red."
+    },
+    "interpretation": {
+      "checkCompleted": "Verificación completada exitosamente",
+      "issuesFound": "{{count}} problema(s) encontrado(s)",
+      "noIssuesDetected": "No se detectaron problemas.",
+      "reviewIssues": "Revise los problemas listados arriba para más detalles."
+    }
+  },
+  "scanners": {
+    "dns": {
+      "name": "Registros DNS",
+      "description": "Recupera registros A, AAAA, MX, TXT, CNAME y valida la configuración",
+      "attribution": "Búsqueda DNS impulsada por Cloudflare DNS"
+    },
+    "spf": {
+      "name": "Autenticación de Correo (SPF)",
+      "description": "Valida registros SPF para seguridad de correo",
+      "attribution": "Validación SPF"
+    },
+    "dmarc": {
+      "name": "Autenticación de Correo (DMARC)",
+      "description": "Valida política DMARC para seguridad de correo",
+      "attribution": "Validación DMARC"
+    },
+    "dkim": {
+      "name": "Autenticación de Correo (DKIM)",
+      "description": "Verifica la configuración de firma DKIM",
+      "attribution": "Validación DKIM"
+    },
+    "tls": {
+      "name": "Seguridad TLS/SSL",
+      "description": "Prueba la configuración TLS y certificado",
+      "attribution": "Prueba TLS"
+    },
+    "securityHeaders": {
+      "name": "Encabezados de Seguridad",
+      "description": "Verifica encabezados HTTP relacionados con la seguridad",
+      "attribution": "Escaneo de encabezados de seguridad"
+    }
+  },
+  "dns": {
+    "label": "Registros DNS",
+    "description": "Recupera registros A, AAAA, MX, TXT, CNAME y valida la configuración",
+    "issues": {
+      "noRecords": "No se encontraron registros A, AAAA o CNAME - el dominio puede no ser accesible vía navegador web",
+      "reservedIP": "El registro A contiene IP reservada/privada: {{ip}} - debe ser una IP pública",
+      "cnameConflict": "Conflicto CNAME detectado - los registros CNAME no pueden coexistir con registros A, AAAA o MX",
+      "multipleCNAME": "Se encontraron múltiples registros CNAME - solo debe existir un registro CNAME por nombre",
+      "excessiveA": "Número inusualmente alto de registros A ({{count}}) - verifique que esto sea intencional",
+      "noMX": "No se encontraron registros MX - la entrega de correo a este dominio fallará",
+      "longTXT": "El registro TXT excede 255 caracteres - puede causar problemas con algunos resolvers DNS",
+      "mxIP": "El registro MX apunta a una dirección IP ({{hostname}}) - debe apuntar a un nombre de host"
+    },
+    "summary": {
+      "found": "Encontrados {{records}}",
+      "none": "No se encontraron registros DNS"
+    },
+    "interpretation": {
+      "success": {
+        "message": "Registros DNS recuperados exitosamente",
+        "recommendation": "La configuración DNS de su dominio es accesible y responde normalmente."
+      },
+      "warning": {
+        "message": "La configuración DNS tiene advertencias",
+        "recommendation": "Revise los problemas DNS detectados. Estos pueden indicar configuraciones erróneas que podrían afectar la accesibilidad del sitio web o la entrega de correo."
+      },
+      "critical": {
+        "message": "La configuración DNS tiene problemas críticos",
+        "recommendation": "Se detectaron múltiples problemas DNS. Estos problemas pueden evitar que su dominio funcione correctamente. Revise y corrija los registros DNS inmediatamente."
+      }
+    }
+  },
+  "emailAuth": {
+    "label": "Autenticación de Correo",
+    "description": "Valida la configuración SPF, DMARC y DKIM para seguridad de correo",
+    "issues": {
+      "noSPF": "No se encontró registro SPF - su dominio es vulnerable a la suplantación de correo",
+      "spfAllowAll": "SPF permite todos los remitentes (+all) - esto no proporciona protección contra la suplantación",
+      "spfNeutral": "SPF usa política neutral (?all) - considere usar ~all con DMARC para protección",
+      "spfMissingAll": "Falta el mecanismo \"all\" en el registro SPF - agregue ~all al final de su registro SPF",
+      "spfHardFailWithDMARC": "SPF usa rechazo fuerte (-all) que puede causar problemas de entregabilidad con correos reenviados. Como tiene aplicación DMARC, considere usar rechazo suave (~all) en su lugar - proporciona la misma seguridad pero mejor entregabilidad. Vea https://www.mailhardener.com/blog/why-mailhardener-recommends-spf-softfail-over-fail",
+      "spfHardFailNoDMARC": "SPF usa rechazo fuerte (-all). Para mejor seguridad Y entregabilidad, combine rechazo suave (~all) con aplicación DMARC (p=quarantine o p=reject)",
+      "spfLookupLimit": "SPF excede el límite de 10 búsquedas DNS ({{count}} encontradas) - causará fallas de validación",
+      "spfLookupWarning": "SPF tiene {{count}} búsquedas DNS - el límite es 10, está cerca del máximo",
+      "noDMARC": "No se encontró registro DMARC - la protección contra suplantación de correo está incompleta",
+      "dmarcNone": "La política DMARC es \"none\" - solo monitoreo, sin aplicación contra correos suplantados",
+      "dmarcQuarantine": "La política DMARC es \"quarantine\" - considere actualizar a \"reject\" para máxima protección",
+      "dmarcNoPolicyDefined": "La política DMARC no está claramente definida - asegúrese de establecer p=quarantine o p=reject",
+      "dmarcNoSubdomain": "Falta política de subdominio DMARC (sp=) - los subdominios pueden no estar protegidos",
+      "dmarcNoReporting": "DMARC no tiene correos de informes (rua/ruf) - no recibirá reportes de abuso",
+      "dmarcPercentage": "DMARC se aplica solo al {{pct}}% de los correos - considere aumentar a pct=100",
+      "noDKIM": "No se detectaron selectores DKIM - los correos no pueden ser verificados criptográficamente",
+      "dkimNote": "Nota: Se verificaron ~40 selectores DKIM comunes usados por proveedores de correo principales. Los selectores personalizados/aleatorios no pueden ser descubiertos solo vía consultas DNS.",
+      "dkimVerify": "Para verificar que DKIM está configurado, intente: 1) Revise la documentación de su proveedor de correo para su nombre de selector, 2) Use la herramienta gratuita DKIM Lookup de EasyDMARC (https://easydmarc.com/tools/dkim-lookup) para auto-detectar, o 3) Inspeccione los encabezados de correo de correos enviados para el parámetro \"s=\" de DKIM-Signature",
+      "dkimFound": "Selector(es) DKIM encontrado(s): {{selectors}}. Pueden existir selectores adicionales pero no pueden ser descubiertos automáticamente."
+    },
+    "aggregate": {
+      "fullAuth": "✓ Autenticación de correo completamente configurada con aplicación",
+      "noEnforcement": "⚠ Autenticación de correo configurada pero DMARC no aplica (p=none)",
+      "partial": "⚠ Autenticación de correo parcial - falta: {{missing}}",
+      "none": "✗ No se configuró autenticación de correo - el dominio es vulnerable a la suplantación"
+    },
+    "interpretation": {
+      "excellent": {
+        "message": "✓ Autenticación de correo completamente configurada con aplicación",
+        "recommendation": "¡Excelente! Su dominio tiene autenticación de correo completa protegiendo contra la suplantación y el phishing."
+      },
+      "configured": {
+        "message": "Autenticación de correo configurada",
+        "recommendation": "Configure {{missing}} para proteger su dominio contra la suplantación de correo. Revise los problemas a continuación para mejoras de configuración específicas."
+      },
+      "partial": {
+        "message": "Problemas de autenticación de correo detectados",
+        "recommendation": "Configure {{missing}} para proteger su dominio contra la suplantación de correo. Revise los problemas a continuación para mejoras de configuración específicas."
+      },
+      "upgradePolicy": {
+        "recommendation": "Actualice su política DMARC de p=none a p=quarantine o p=reject para aplicación. Revise los problemas a continuación para mejoras de configuración específicas."
+      }
+    }
+  },
+  "certificates": {
+    "label": "Certificados SSL/TLS",
+    "description": "Analiza certificados SSL de registros públicos de transparencia de certificados",
+    "issues": {
+      "noCerts": "No se encontraron certificados SSL - si usa HTTPS, esto podría indicar un certificado muy nuevo",
+      "expiring7Days": "El certificado para {{commonName}} expira en {{days}} día(s) - ¡renueve inmediatamente!",
+      "expiring30Days": "El certificado para {{commonName}} expira en {{days}} días - planee la renovación pronto",
+      "selfSigned": "Se detectaron {{count}} certificado(s) auto-firmado(s) - no confiables para navegadores",
+      "wildcard": "Se encontraron {{count}} certificado(s) comodín - asegure controles de seguridad apropiados",
+      "excessive": "Número alto de certificados activos ({{count}}) - revise certificados innecesarios o duplicados",
+      "recentExpired": "{{count}} certificado(s) expiraron recientemente sin reemplazo: {{names}}",
+      "manyIssuers": "Certificados de {{count}} emisores diferentes - considere estandarizar en menos CAs"
+    },
+    "summary": {
+      "found": "Se encontraron {{total}} certificados totales",
+      "active": ", {{active}} actualmente activos",
+      "expired": ", {{expired}} expirados",
+      "none": "No se encontraron certificados en los registros de transparencia"
+    }
+  },
+  "securityHeaders": {
+    "label": "Encabezados de Seguridad",
+    "description": "Analiza encabezados de seguridad HTTP usando securityheaders.com",
+    "issues": {
+      "missing": "Falta encabezado de seguridad: {{header}}",
+      "unavailable": "No se pudo recuperar el análisis de encabezados de seguridad: {{error}}"
+    },
+    "summary": {
+      "grade": "Calificación: {{grade}}",
+      "score": " ({{score}}/100)",
+      "analyzed": "Encabezados de seguridad analizados",
+      "unavailable": "Verificación de encabezados de seguridad no disponible"
+    },
+    "interpretation": {
+      "unavailable": {
+        "message": "Escaneo de encabezados de seguridad no disponible",
+        "recommendation": "No se pudo conectar a securityheaders.com. Visite la URL de prueba directamente para analizar los encabezados."
+      },
+      "gradeA": {
+        "message": "Excelente configuración de encabezados de seguridad",
+        "recommendation": "Su sitio tiene encabezados de seguridad HTTP sólidos implementados. Continúe monitoreando para nuevas recomendaciones de encabezados de seguridad."
+      },
+      "gradeB": {
+        "message": "Buenos encabezados de seguridad con problemas menores",
+        "recommendation": "Su sitio tiene encabezados de seguridad decentes. Revise los encabezados faltantes y considere implementarlos para mayor seguridad."
+      },
+      "gradeC": {
+        "message": "Encabezados de seguridad básicos presentes",
+        "recommendation": "Faltan varios encabezados de seguridad importantes. Implementar estos encabezados mejorará significativamente la postura de seguridad de su sitio."
+      },
+      "gradeDF": {
+        "message": "Configuración pobre de encabezados de seguridad",
+        "recommendation": "Su sitio carece de encabezados de seguridad críticos. Implemente Content-Security-Policy, X-Frame-Options y otros encabezados recomendados inmediatamente."
+      }
+    }
+  },
+  "rdap": {
+    "label": "Registro de Dominio (RDAP)",
+    "description": "Recupera información de registro de dominio y DNSSEC vía RDAP",
+    "issues": {
+      "invalidDomain": "El dominio debe tener al menos un nombre y TLD (ej., ejemplo.com)",
+      "noRDAPServer": "No hay servicio RDAP disponible para dominios .{{tld}}.",
+      "legacyWhois": "Este TLD puede no soportar RDAP o usa solo WHOIS heredado.",
+      "notFound": "No se pudieron recuperar datos RDAP: {{error}}",
+      "notRegistered": "El dominio puede no estar registrado o el servidor RDAP puede no estar disponible.",
+      "problemStatus": "El dominio tiene estado problemático: {{statuses}}",
+      "expired": "El dominio expiró hace {{days}} días",
+      "expiringSoon": "¡El dominio expira en {{days}} días - renueve pronto!",
+      "expiringWarning": "El dominio expira en {{days}} días - planee la renovación",
+      "noDNSSEC": "DNSSEC no habilitado - dominio vulnerable a secuestro DNS/envenenamiento de caché",
+      "dnssecUnsigned": "DNSSEC está marcado como sin firmar - considere habilitar DNSSEC para mayor seguridad"
+    },
+    "summary": {
+      "invalid": "Dominio inválido",
+      "unavailable": "RDAP no disponible para este TLD",
+      "failed": "Búsqueda RDAP falló",
+      "found": "Dominio: {{domain}}, Estado: {{status}}"
+    },
+    "interpretation": {
+      "incomplete": {
+        "message": "Búsqueda RDAP incompleta",
+        "recommendation": "La búsqueda RDAP falló. Esto no afecta la funcionalidad del dominio."
+      },
+      "critical": {
+        "message": "El registro del dominio tiene problemas críticos",
+        "recommendation": "Atienda los problemas de registro del dominio inmediatamente para prevenir interrupciones del servicio. Verifique la fecha de expiración y la configuración de los servidores de nombres."
+      },
+      "warning": {
+        "message": "El registro del dominio necesita atención",
+        "recommendation": "Planee renovar su dominio antes de la expiración. Configure la renovación automática si está disponible."
+      },
+      "recommendations": {
+        "message": "El registro del dominio tiene recomendaciones",
+        "recommendation": "Revise las recomendaciones a continuación para mejorar la seguridad y confiabilidad del dominio."
+      },
+      "healthy": {
+        "message": "El registro del dominio está saludable",
+        "recommendation": "El registro del dominio y la configuración DNSSEC se ven bien."
+      },
+      "healthyNoDnssec": {
+        "message": "El registro del dominio está saludable",
+        "recommendation": "Considere habilitar DNSSEC para seguridad adicional contra la suplantación de DNS."
+      }
+    }
+  },
+  "sslLabs": {
+    "label": "Configuración SSL/TLS",
+    "description": "Analiza la configuración SSL/TLS usando Qualys SSL Labs (puede tomar varios minutos)",
+    "issues": {
+      "scanError": "SSL Labs no pudo escanear este dominio: {{error}}",
+      "timeout": "El escaneo expiró o aún está procesando. Inténtelo más tarde o visite ssllabs.com para resultados completos.",
+      "noEndpoints": "No se detectaron endpoints HTTPS para este dominio",
+      "gradeF": "La configuración SSL/TLS recibió calificación F - problemas críticos de seguridad",
+      "vulnerable": "Vulnerable a: {{vulnerabilities}}",
+      "weakProtocols": "Protocolos obsoletos/débiles habilitados: {{protocols}}",
+      "noPFS": "Forward secrecy no soportado - comunicaciones pasadas podrían ser descifradas",
+      "certIssues": "La cadena de certificados tiene problemas",
+      "noHSTS": "HSTS no habilitado - vulnerable a ataques de SSL stripping",
+      "hstsShort": "HSTS max-age es demasiado corto ({{maxAge}} segundos) - recomendamos al menos 31536000 (1 año)"
+    },
+    "summary": {
+      "error": "Error de escaneo SSL Labs: {{error}}",
+      "inProgress": "Escaneo SSL Labs aún en progreso (estado: {{status}})",
+      "grade": "Calificación general: {{grade}}",
+      "noEndpoints": "No se encontraron endpoints SSL/TLS"
+    },
+    "interpretation": {
+      "gradeA": {
+        "message": "Excelente configuración SSL/TLS",
+        "recommendation": "Su configuración SSL/TLS es sólida y sigue las mejores prácticas de la industria. Continúe monitoreando para nuevas vulnerabilidades y actualizaciones de protocolos."
+      },
+      "gradeB": {
+        "message": "Buena configuración SSL/TLS con problemas menores",
+        "recommendation": "Su configuración SSL/TLS es generalmente segura pero tiene espacio para mejoras. Revise las recomendaciones de SSL Labs para lograr una calificación A."
+      },
+      "gradeC": {
+        "message": "Configuración SSL/TLS aceptable con algunas preocupaciones",
+        "recommendation": "Su configuración SSL/TLS tiene debilidades notables. Deshabilite protocolos obsoletos, habilite forward secrecy e implemente HSTS para mejor seguridad."
+      },
+      "gradeDF": {
+        "message": "Configuración SSL/TLS pobre",
+        "recommendation": "Su configuración SSL/TLS tiene problemas serios de seguridad. Actualice a protocolos modernos (TLS 1.2+), corrija problemas de certificados y deshabilite suites de cifrado vulnerables inmediatamente."
+      },
+      "error": {
+        "message": "El escaneo de SSL Labs no pudo completarse",
+        "recommendation": "El escaneo encontró un error. Inténtelo más tarde o visite ssllabs.com directamente para un escaneo manual."
+      }
+    }
+  },
+  "domainScanner": {
+    "title": "Escaneo de Seguridad de Dominio",
+    "description": "Ingrese un dominio para escanear configuraciones de seguridad comunes",
+    "placeholder": "ejemplo.com",
+    "scanButton": "Escanear Dominio",
+    "clearButton": "Limpiar Resultados",
+    "scanning": "Escaneando...",
+    "issuesDetected": "{{count}} problema(s) detectado(s)",
+    "issuesDetected_one": "{{count}} problema detectado",
+    "issuesDetected_other": "{{count}} problemas detectados",
+    "noIssues": "No se detectaron problemas",
+    "errors": {
+      "invalidDomain": "Por favor ingrese un nombre de dominio válido",
+      "scanFailed": "El escaneo falló. Por favor, inténtelo de nuevo.",
+      "timeout": "El escaneo expiró. Por favor, inténtelo de nuevo."
+    }
+  }
+}

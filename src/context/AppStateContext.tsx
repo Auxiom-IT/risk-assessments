@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import questionsData from '../data/questions.json';
-import { Question, RawOption, RawQuestion } from '../types/questions';
+import { Question, RawQuestion } from '../types/questions';
 import { computeScore, ScoreResult } from '../utils/scoring';
 import { mapRisks, RiskMappingResult } from '../utils/recommendations';
 import { DomainScanResult } from '../utils/domainChecks';
@@ -12,6 +12,9 @@ import * as amplitude from '@amplitude/analytics-browser';
 import { trackEvent, trackImport } from '../utils/analytics';
 import { scannerCache } from '../utils/scannerCache';
 import { validateImportJSON } from '../utils/importValidation';
+import { useTranslatedQuestions } from '../utils/questionTranslation';
+import { migrateAnswers, needsMigration } from '../utils/answerMigration';
+import { useTranslation } from 'react-i18next';
 
 interface AppStateContextValue {
   questions: Question[];
@@ -35,9 +38,9 @@ export type { AppStateContextValue };
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
 
-const ANSWERS_KEY = 'risk_answers_v1';
-const DOMAIN_KEY = 'risk_domain_scan_v1';
-const DOMAIN_AGG_KEY = 'risk_domain_scan_agg_v1';
+const ANSWERS_KEY = 'risk_answers_v2';
+const DOMAIN_KEY = 'risk_domain_scan_v2';
+const DOMAIN_AGG_KEY = 'risk_domain_scan_agg_v2';
 
 const loadStored = <T,>(key: string): T | undefined => {
   try {
@@ -58,27 +61,47 @@ const persist = (key: string, value: any) => {
 };
 
 export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [questions] = useState<Question[]>(() => {
-    const raw = (questionsData as { questions: RawQuestion[] }).questions;
-    return raw.map((q) => ({
-      id: q.id,
-      text: q.text,
-      category: q.category,
-      recommendationMap: q.recommendationMap,
-      options: (q.options || [])
-        .sort((a: RawOption, b: RawOption) => ((a?.points || 0) - (b?.points || 0)))
-        .map((o) => ({
-          label: o.option || '',
-          value: o.option || '',
-          risk: o.risk || '',
-          points: o.points ?? 0
-        }))
-    }));
+  const { t, i18n } = useTranslation('questions');
+
+  // Store raw questions data
+  const rawQuestions = useMemo(() => {
+    return (questionsData as { questions: RawQuestion[] }).questions;
+  }, []);
+
+  // Translate questions using i18n
+  const questions = useTranslatedQuestions(rawQuestions);
+
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    return loadStored<Record<string, string>>(ANSWERS_KEY) || {};
   });
 
-  const [answers, setAnswers] = useState<Record<string, string>>(
-    () => loadStored<Record<string, string>>(ANSWERS_KEY) || {}
-  );
+  const [migrationDone, setMigrationDone] = useState(false);
+
+  // Perform migration after i18n is ready
+  useEffect(() => {
+    if (migrationDone || !i18n.isInitialized) return;
+
+    const stored = answers;
+
+    // Check if migration is needed
+    if (Object.keys(stored).length > 0 && needsMigration(stored)) {
+      const migrationResult = migrateAnswers(stored, rawQuestions, t);
+
+      // Save migrated answers back to localStorage
+      if (migrationResult.migratedCount > 0) {
+        setAnswers(migrationResult.answers);
+        persist(ANSWERS_KEY, migrationResult.answers);
+
+        // Track migration for analytics
+        trackEvent('answers_migrated', {
+          migrated_count: migrationResult.migratedCount,
+          unmatched_count: migrationResult.unmatchedCount
+        });
+      }
+    }
+
+    setMigrationDone(true);
+  }, [i18n.isInitialized, migrationDone, answers, rawQuestions, t]);
   const [domainScanAggregate, setDomainScanAggregate] = useState<DomainScanAggregate | undefined>(
     () => loadStored<DomainScanAggregate>(DOMAIN_AGG_KEY)
   );
@@ -87,10 +110,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     if (APP_CONFIG.amplitudeApiKey) {
       amplitude.init(APP_CONFIG.amplitudeApiKey, undefined, { defaultTracking: true });
-      // amplitude.setUserProperties({
-      //   host: window.location.host,
-      //   isFork: window.location.host !== APP_CONFIG.officialDomain
-      // });
     }
   }, []);
 
@@ -152,7 +171,13 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     trackEvent('domain_scanned_modular', { domain: agg.domain, issues_count: agg.issues.length });
   };
 
-  const exportJSON = () => JSON.stringify({ answers, risks, bestPractices, domainScanAggregate }, null, 2);
+  const exportJSON = () => JSON.stringify({
+    version: 2,
+    answers,
+    risks,
+    bestPractices,
+    domainScanAggregate
+  }, null, 2);
 
   const importJSON = (json: string): { success: boolean; error?: string } => {
     // Validate JSON structure and complexity first
@@ -165,10 +190,36 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const obj = JSON.parse(json);
 
+      // Detect version: missing version = v1, explicit version 1 = v1, version 2 = v2
+      const dataVersion = obj.version ?? 1; // Default to v1 if no version specified
+
+      let answersImported = false;
+
       // Validate and import answers
       if (obj.answers && typeof obj.answers === 'object' && !Array.isArray(obj.answers)) {
-        setAnswers(obj.answers);
-        persist(ANSWERS_KEY, obj.answers);
+        let answersToImport = obj.answers;
+
+        // For v1 data (no version or version=1), ALWAYS migrate regardless of what needsMigration says
+        // because v1 format uses text-based answers that must be converted to option IDs
+        const shouldMigrate = dataVersion === 1;
+
+        // Migrate v1 data to v2 format
+        if (shouldMigrate) {
+
+          const migrationResult = migrateAnswers(answersToImport, rawQuestions, t);
+          answersToImport = migrationResult.answers;
+
+          // Track migration during import
+          trackEvent('imported_answers_migrated', {
+            from_version: dataVersion,
+            migrated_count: migrationResult.migratedCount,
+            unmatched_count: migrationResult.unmatchedCount
+          });
+        }
+
+        setAnswers(answersToImport);
+        persist(ANSWERS_KEY, answersToImport);
+        answersImported = Object.keys(answersToImport).length > 0;
       }
 
       // Validate and import domain scan aggregate
@@ -182,6 +233,12 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       trackImport('json', true);
+
+      // Return success with warning if no answers were actually imported
+      if (!answersImported && !obj.domainScanAggregate) {
+        return { success: false, error: 'No valid data found to import' };
+      }
+
       return { success: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to parse JSON';

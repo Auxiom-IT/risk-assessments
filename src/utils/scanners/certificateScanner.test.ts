@@ -14,10 +14,8 @@ beforeEach(() => {
 describe('certificateScanner', () => {
   it('should have correct scanner metadata', () => {
     expect(certificateScanner.id).toBe('certificates');
-    expect(certificateScanner.label).toBe('SSL/TLS Certificates');
+    expect(certificateScanner.label).toBe('certificates.label');
     expect(certificateScanner.description).toBeDefined();
-    expect(certificateScanner.timeout).toBe(15000);
-    expect(certificateScanner.dataSource).toBeDefined();
   });
 
   it('should handle no certificates found', async () => {

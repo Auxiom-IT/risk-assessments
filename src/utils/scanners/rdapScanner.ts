@@ -1,11 +1,12 @@
-// RDAP scanner: Domain registration and DNSSEC information
+// RDAP Scanner: fetches domain registration data via RDAP protocol
 
+import i18next from 'i18next';
 import { DomainScanner, ExecutedScannerResult, ScannerInterpretation, SeverityLevel } from '../../types/domainScan';
 
 export const rdapScanner: DomainScanner = {
   id: 'rdap',
-  label: 'Domain Registration (RDAP)',
-  description: 'Retrieves domain registration and DNSSEC information via RDAP',
+  label: 'rdap.label',
+  description: 'rdap.description',
   timeout: 10000, // 10 seconds - bootstrap lookup + RDAP query
   dataSource: {
     name: 'RDAP',
@@ -21,8 +22,8 @@ export const rdapScanner: DomainScanner = {
       if (parts.length < 2) {
         return {
           data: { error: 'Invalid domain format' },
-          summary: 'Invalid domain',
-          issues: ['Domain must have at least a name and TLD (e.g., example.com)']
+          summary: i18next.t('rdap.summary.invalid', { ns: 'scanners' }),
+          issues: [i18next.t('rdap.issues.invalidDomain', { ns: 'scanners' })]
         };
       }
 
@@ -56,10 +57,10 @@ export const rdapScanner: DomainScanner = {
             error: `No RDAP server found for .${tld} TLD`,
             tld
           },
-          summary: 'RDAP not available for this TLD',
+          summary: i18next.t('rdap.summary.unavailable', { ns: 'scanners' }),
           issues: [
-            `No RDAP service available for .${tld} domains.`,
-            'This TLD may not support RDAP or uses legacy WHOIS only.'
+            i18next.t('rdap.issues.noRDAPServer', { ns: 'scanners', tld }),
+            i18next.t('rdap.issues.legacyWhois', { ns: 'scanners' })
           ]
         };
       }
@@ -96,10 +97,10 @@ export const rdapScanner: DomainScanner = {
             error: lastError || 'Domain not found in RDAP',
             rdapServers
           },
-          summary: 'RDAP lookup failed',
+          summary: i18next.t('rdap.summary.failed', { ns: 'scanners' }),
           issues: [
-            `Could not retrieve RDAP data: ${lastError || 'Domain not found'}`,
-            'Domain may not be registered or RDAP server may be unavailable.'
+            i18next.t('rdap.issues.notFound', { ns: 'scanners', error: lastError || 'Domain not found' }),
+            i18next.t('rdap.issues.notRegistered', { ns: 'scanners' })
           ]
         };
       }
@@ -121,7 +122,7 @@ export const rdapScanner: DomainScanner = {
         const problemStatusList = statuses.filter((s: string) =>
           problemStatuses.some((ps) => s.toLowerCase().includes(ps.toLowerCase()))
         );
-        issues.push(`Domain has problematic status: ${problemStatusList.join(', ')}`);
+        issues.push(i18next.t('rdap.issues.problemStatus', { ns: 'scanners', statuses: problemStatusList.join(', ') }));
       }
 
       // Check expiration
@@ -138,11 +139,11 @@ export const rdapScanner: DomainScanner = {
         );
 
         if (daysUntilExpiration < 0) {
-          issues.push(`Domain expired ${Math.abs(daysUntilExpiration)} days ago`);
+          issues.push(i18next.t('rdap.issues.expired', { ns: 'scanners', days: Math.abs(daysUntilExpiration) }));
         } else if (daysUntilExpiration <= 30) {
-          issues.push(`Domain expires in ${daysUntilExpiration} days - renew soon!`);
+          issues.push(i18next.t('rdap.issues.expiringSoon', { ns: 'scanners', days: daysUntilExpiration }));
         } else if (daysUntilExpiration <= 60) {
-          warnings.push(`Domain expires in ${daysUntilExpiration} days - plan renewal`);
+          warnings.push(i18next.t('rdap.issues.expiringWarning', { ns: 'scanners', days: daysUntilExpiration }));
         }
       }
 
@@ -150,7 +151,7 @@ export const rdapScanner: DomainScanner = {
       const secureDNS = data.secureDNS;
       if (secureDNS) {
         if (secureDNS.delegationSigned === false) {
-          warnings.push('DNSSEC is not enabled - domain is vulnerable to DNS spoofing attacks');
+          warnings.push(i18next.t('rdap.issues.noDNSSEC', { ns: 'scanners' }));
         }
       }
 
@@ -163,18 +164,8 @@ export const rdapScanner: DomainScanner = {
       }
 
       // Build summary
-      let summary = `Domain: ${ldhName}`;
-      if (statuses.length > 0) {
-        const activeStatus = statuses.includes('active') ? 'active' : statuses[0];
-        summary += `, status: ${activeStatus}`;
-      }
-      if (expirationEvent) {
-        const expirationDate = new Date(expirationEvent.eventDate);
-        const daysUntilExpiration = Math.floor(
-          (expirationDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-        );
-        summary += `, expires in ${daysUntilExpiration} days`;
-      }
+      const activeStatus = statuses.length > 0 ? (statuses.includes('active') ? 'active' : statuses[0]) : 'unknown';
+      const summary = i18next.t('rdap.summary.found', { ns: 'scanners', domain: ldhName, status: activeStatus });
 
       const allIssues = [...issues, ...warnings];
 
@@ -199,8 +190,8 @@ export const rdapScanner: DomainScanner = {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       return {
         data: { error: errorMessage },
-        summary: 'RDAP lookup failed',
-        issues: [`Failed to retrieve RDAP information: ${errorMessage}`]
+        summary: i18next.t('rdap.summary.failed', { ns: 'scanners' }),
+        issues: [i18next.t('rdap.issues.notFound', { ns: 'scanners', error: errorMessage })]
       };
     }
   }
@@ -223,10 +214,8 @@ export const interpretRdapResult = (
   if (data?.error) {
     return {
       severity: 'info',
-      message: 'RDAP lookup incomplete',
-      recommendation: data.error.includes('not found')
-        ? 'Domain not found in RDAP. This may be normal for some TLDs or private registrations.'
-        : 'RDAP lookup failed. This doesn\'t affect domain functionality.'
+      message: i18next.t('rdap.interpretation.incomplete.message', { ns: 'scanners' }),
+      recommendation: i18next.t('rdap.interpretation.incomplete.recommendation', { ns: 'scanners' })
     };
   }
 
@@ -246,23 +235,22 @@ export const interpretRdapResult = (
 
   if (hasCriticalIssues) {
     severity = 'critical';
-    message = 'Domain registration has critical issues';
-    recommendation = 'Address domain registration issues immediately to prevent service disruption. ' +
-      'Check expiration date and nameserver configuration.';
+    message = i18next.t('rdap.interpretation.critical.message', { ns: 'scanners' });
+    recommendation = i18next.t('rdap.interpretation.critical.recommendation', { ns: 'scanners' });
   } else if (hasExpirationWarning) {
     severity = 'warning';
-    message = 'Domain registration needs attention';
-    recommendation = 'Plan to renew your domain before expiration. Set up auto-renewal if available.';
+    message = i18next.t('rdap.interpretation.warning.message', { ns: 'scanners' });
+    recommendation = i18next.t('rdap.interpretation.warning.recommendation', { ns: 'scanners' });
   } else if (issueCount > 0) {
     severity = 'warning';
-    message = 'Domain registration has recommendations';
-    recommendation = 'Review the recommendations below to improve domain security and reliability.';
+    message = i18next.t('rdap.interpretation.recommendations.message', { ns: 'scanners' });
+    recommendation = i18next.t('rdap.interpretation.recommendations.recommendation', { ns: 'scanners' });
   } else {
     severity = 'success';
-    message = 'Domain registration is healthy';
+    message = i18next.t('rdap.interpretation.healthy.message', { ns: 'scanners' });
     recommendation = data?.dnssecEnabled
-      ? 'Domain registration and DNSSEC configuration look good.'
-      : 'Consider enabling DNSSEC for additional security against DNS spoofing.';
+      ? i18next.t('rdap.interpretation.healthy.recommendation', { ns: 'scanners' })
+      : i18next.t('rdap.interpretation.healthyNoDnssec.recommendation', { ns: 'scanners' });
   }
 
   return {

@@ -1,4 +1,5 @@
 export interface RawOption {
+  id: string;
   option?: string;
   risk?: string;
   points?: number;
@@ -20,7 +21,8 @@ export interface AnswerOption {
 export interface Question {
   id: string; // Unique stable id (snake_case recommended)
   text: string; // Human readable question text
-  category: string; // Category grouping for breakdown (e.g. identity, network, email)
+  category: string; // Translated category name for display
+  categoryKey: string; // Original untranslated category for grouping
   options: AnswerOption[]; // Dropdown options
 }
 

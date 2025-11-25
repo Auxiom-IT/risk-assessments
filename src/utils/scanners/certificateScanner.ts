@@ -1,25 +1,21 @@
-// Certificate enumeration scanner using crt.sh with security analysis
+// Certificate Scanner: Inspects SSL/TLS certificates via crt.sh transparency logs.
 
+import i18next from 'i18next';
 import { DomainScanner, ExecutedScannerResult, ScannerInterpretation, SeverityLevel } from '../../types/domainScan';
 import { fetchCertificates } from '../domainChecks';
 
 export const certificateScanner: DomainScanner = {
   id: 'certificates',
-  label: 'SSL/TLS Certificates',
-  description: 'Analyzes SSL certificates from public certificate transparency logs',
-  timeout: 15000, // 15 seconds - external API call
-  dataSource: {
-    name: 'crt.sh',
-    url: 'https://crt.sh',
-  },
+  label: 'certificates.label',
+  description: 'certificates.description',
   run: async (domain) => {
     const certificates = await fetchCertificates(domain);
 
     if (!certificates || certificates.length === 0) {
       return {
         data: { certificates: [], certCount: 0 },
-        summary: 'No certificates found in transparency logs',
-        issues: ['No SSL certificates found - if you use HTTPS, this might indicate a very new certificate']
+        summary: i18next.t('certificates.summary.none', { ns: 'scanners' }),
+        issues: [i18next.t('certificates.issues.noCerts', { ns: 'scanners' })]
       };
     }
 
@@ -75,13 +71,19 @@ export const certificateScanner: DomainScanner = {
     if (expiringIn7Days.length > 0) {
       expiringIn7Days.forEach((cert) => {
         issues.push(
-          `Certificate for ${cert.commonName} expires in ${cert.daysUntilExpiry} day(s) - renew immediately!`
+          i18next.t(
+            'certificates.issues.expiring7Days',
+            { ns: 'scanners', commonName: cert.commonName, days: cert.daysUntilExpiry }
+          )
         );
       });
     } else if (expiringIn30Days.length > 0) {
       expiringIn30Days.forEach((cert) => {
         warnings.push(
-          `Certificate for ${cert.commonName} expires in ${cert.daysUntilExpiry} days - plan renewal soon`
+          i18next.t(
+            'certificates.issues.expiring30Days',
+            { ns: 'scanners', commonName: cert.commonName, days: cert.daysUntilExpiry }
+          )
         );
       });
     }
@@ -94,7 +96,7 @@ export const certificateScanner: DomainScanner = {
 
     if (selfSignedCerts.length > 0) {
       issues.push(
-        `${selfSignedCerts.length} self-signed certificate(s) detected - not trusted by browsers`
+        i18next.t('certificates.issues.selfSigned', { ns: 'scanners', count: selfSignedCerts.length })
       );
     }
 
@@ -102,14 +104,14 @@ export const certificateScanner: DomainScanner = {
     const wildcardCerts = activeCerts.filter((cert) => cert.commonName.startsWith('*.'));
     if (wildcardCerts.length > 0) {
       warnings.push(
-        `${wildcardCerts.length} wildcard certificate(s) found - ensure proper security controls`
+        i18next.t('certificates.issues.wildcard', { ns: 'scanners', count: wildcardCerts.length })
       );
     }
 
     // Analysis 4: Detect unusual number of active certificates
     if (activeCerts.length > 10) {
       warnings.push(
-        `High number of active certificates (${activeCerts.length}) - review for unnecessary or duplicate certs`
+        i18next.t('certificates.issues.excessive', { ns: 'scanners', count: activeCerts.length })
       );
     }
 
@@ -128,7 +130,10 @@ export const certificateScanner: DomainScanner = {
     if (expiredWithoutReplacement.length > 0) {
       const certNames = expiredWithoutReplacement.map((cert) => cert.commonName).join(', ');
       warnings.push(
-        `${expiredWithoutReplacement.length} certificate(s) expired recently without replacement: ${certNames}`
+        i18next.t(
+          'certificates.issues.recentExpired',
+          { ns: 'scanners', count: expiredWithoutReplacement.length, names: certNames }
+        )
       );
     }
 
@@ -136,18 +141,18 @@ export const certificateScanner: DomainScanner = {
     const uniqueIssuers = new Set(activeCerts.map((cert) => cert.issuer));
     if (uniqueIssuers.size > 3) {
       warnings.push(
-        `Certificates from ${uniqueIssuers.size} different issuers - consider standardizing on fewer CAs`
+        i18next.t('certificates.issues.manyIssuers', { ns: 'scanners', count: uniqueIssuers.size })
       );
     }
 
     // Build summary
     const allIssues = [...issues, ...warnings];
-    let summary = `Found ${certificates.length} total certificates`;
+    let summary = i18next.t('certificates.summary.found', { ns: 'scanners', total: certificates.length });
     if (activeCerts.length > 0) {
-      summary += `, ${activeCerts.length} currently active`;
+      summary += i18next.t('certificates.summary.active', { ns: 'scanners', active: activeCerts.length });
     }
     if (expiredCerts.length > 0) {
-      summary += `, ${expiredCerts.length} expired`;
+      summary += i18next.t('certificates.summary.expired', { ns: 'scanners', expired: expiredCerts.length });
     }
 
     // Add data for UI display

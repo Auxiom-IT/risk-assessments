@@ -14,7 +14,7 @@ beforeEach(() => {
 describe('dnsScanner', () => {
   it('should have correct scanner metadata', () => {
     expect(dnsScanner.id).toBe('dns');
-    expect(dnsScanner.label).toBe('DNS Records');
+    expect(dnsScanner.label).toBe('dns.label');
     expect(dnsScanner.description).toBeDefined();
     expect(dnsScanner.timeout).toBe(5000);
     expect(dnsScanner.dataSource).toBeDefined();

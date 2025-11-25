@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppState } from '../../context/AppStateContext';
 import { SCANNERS, interpretScannerResult } from '../../utils/scanners';
 import { TrackedButton } from '../TrackedButton';
@@ -8,6 +9,8 @@ import Footer from '../Footer';
 import { renderIssueWithLinks } from '../../utils/text';
 
 const DomainScanner = () => {
+  const { t } = useTranslation('common');
+  const { t: tScanners } = useTranslation('scanners');
   const { runScanners, domainScanAggregate, scannerProgress } = useAppState();
   const [input, setInput] = useState(domainScanAggregate?.domain ?? '');
   const [loading, setLoading] = useState(false);
@@ -18,14 +21,14 @@ const DomainScanner = () => {
     setError(null);
 
     if (!input.trim()) {
-      setError('Enter a domain');
+      setError(t('domainScanner.errors.enterDomain'));
       return;
     }
 
     // Validate domain using URL constructor
     const validation = validateDomain(input);
     if (!validation.isValid) {
-      setError(validation.error ?? 'Invalid domain');
+      setError(validation.error ?? t('domainScanner.errors.invalidDomain'));
       return;
     }
 
@@ -35,7 +38,7 @@ const DomainScanner = () => {
       // Use normalized domain for scanning
       await runScanners(validation.normalizedDomain!);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Scan failed';
+      const errorMessage = err instanceof Error ? err.message : t('domainScanner.errors.scanFailed');
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -44,23 +47,28 @@ const DomainScanner = () => {
 
   return (
     <div className='panel'>
-      <h2>Domain Assessment</h2>
-      <p>Run lightweight DNS / email auth / certificate / header checks using public sources.</p>
+      <h2>{t('domainScanner.title')}</h2>
+      <p>{t('domainScanner.description')}</p>
       <form onSubmit={onScan} className='domain-form'>
         <input
           type='text'
-          placeholder='example.com'
+          placeholder={t('domainScanner.placeholder')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
         <TrackedButton type='submit' disabled={loading} trackingName='domain_scan_submit'>
-          <span className='button-text-full'>{loading ? 'Scanning...' : 'Scan Domain'}</span>
-          <span className='button-text-short'>{loading ? 'Scanning...' : 'Scan'}</span>
+          <span className='button-text-full'>
+            {loading
+              ? t('domainScanner.scanning')
+              : t('domainScanner.scanButton')
+            }
+          </span>
+          <span className='button-text-short'>{loading ? t('domainScanner.scanning') : t('domainScanner.scan')}</span>
         </TrackedButton>
       </form>
       {error && <div className='error'>{error}</div>}
       <div className='modular-results'>
-        <h3>Scanners</h3>
+        <h3>{t('domainScanner.scanners')}</h3>
         <ul className='scanner-list'>
           {SCANNERS.map((s) => {
             const prog = scannerProgress.find((p) => p.id === s.id);
@@ -86,11 +94,11 @@ const DomainScanner = () => {
               if (!interpretation) return null;
               const severityClass = `severity-badge severity-${interpretation.severity}`;
               const severityLabel = {
-                success: '✓ Good',
-                info: 'ℹ Info',
-                warning: '⚠ Warning',
-                critical: '⚠ Critical',
-                error: '✕ Error'
+                success: t('domainScanner.severityGood'),
+                info: t('domainScanner.severityInfo'),
+                warning: t('domainScanner.severityWarning'),
+                critical: t('domainScanner.severityCritical'),
+                error: t('domainScanner.severityError')
               }[interpretation.severity];
 
               return <span className={severityClass}>{severityLabel}</span>;
@@ -101,15 +109,16 @@ const DomainScanner = () => {
                 <div className='scanner-header'>
                   <div className='scanner-title'>
                     <span className={`status-icon status-icon-${status}`}>{getStatusIcon()}</span>
-                    <strong>{s.label}</strong>
+                    <strong>{tScanners(`${s.id}.label`)}</strong>
                     {renderSeverityBadge()}
                   </div>
                   <span className='status-text'>{status}</span>
                 </div>
-                <div className='scanner-description'>{s.description}</div>
+                <div className='scanner-description'>{tScanners(`${s.id}.description`)}</div>
                 {prog?.dataSource && (
                   <div className='scanner-source'>
-                    Data source:{' '}
+                    {t('domainScanner.dataSource')}
+                    {' '}
                     <a href={prog.dataSource.url} target='_blank' rel='noopener noreferrer'>
                       {prog.dataSource.name}
                     </a>
@@ -157,11 +166,11 @@ const DomainScanner = () => {
                 )}
 
                 {prog?.status === 'error' && prog.error && (
-                  <div className='error-detail'>Error: {prog.error}</div>
+                  <div className='error-detail'>{t('domainScanner.errorPrefix')} {prog.error}</div>
                 )}
                 {prog?.issues && prog.issues.length > 0 && (
                   <details className='issues-details'>
-                    <summary>{prog.issues.length} issue(s) detected</summary>
+                    <summary>{t('domainScanner.issues', { count: prog.issues.length })}</summary>
                     <ul className='issues-list'>
                       {prog.issues.map((i, idx) => renderIssueWithLinks(i, idx))}
                     </ul>
@@ -173,25 +182,27 @@ const DomainScanner = () => {
         </ul>
         {domainScanAggregate && (
           <div className='aggregate'>
-            <h4>Aggregate Result</h4>
+            <h4>{t('domainScanner.aggregateResult')}</h4>
             <div className='aggregate-info'>
-              <p><strong>Domain:</strong> {domainScanAggregate.domain}</p>
-              <p><strong>Timestamp:</strong> {new Date(domainScanAggregate.timestamp).toLocaleString()}</p>
+              <p><strong>{t('domainScanner.domain')}</strong> {domainScanAggregate.domain}</p>
+              <p>
+                <strong>{t('domainScanner.timestamp')}</strong>
+                {' '}{new Date(domainScanAggregate.timestamp).toLocaleString()}
+              </p>
             </div>
-            <h5>All Issues ({domainScanAggregate.issues.length})</h5>
+            <h5>{t('domainScanner.allIssues')} ({domainScanAggregate.issues.length})</h5>
             {domainScanAggregate.issues.length ? (
               <ul className='aggregate-issues'>
                 {domainScanAggregate.issues.map((i, idx) => <li key={idx}>{i}</li>)}
               </ul>
             ) : (
-              <p className='no-issues'>✓ No issues detected - Your domain configuration looks good!</p>
+              <p className='no-issues'>{t('domainScanner.noIssuesDetected')}</p>
             )}
           </div>
         )}
       </div>
       <p className='disclaimer'>
-        Disclaimer: Some checks (full SSL chain, exhaustive headers, breach data) require backend or API keys
-        not included in this free static tool.
+        {t('domainScanner.disclaimer')}
       </p>
       <Footer />
     </div>

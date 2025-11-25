@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Route, Routes, NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Home from './Home';
 import PageNotFound from './NotFound';
 import Questionnaire from './Questionnaire';
@@ -11,10 +13,9 @@ import ResetDialog from './ResetDialog';
 import '../styles.css';
 
 
-import { useEffect, useState } from 'react';
-
 const AppContent = () => {
   const { resetAll, exportJSON, answers, domainScanAggregate } = useAppState();
+  const { t } = useTranslation('common');
   const [showResetDialog, setShowResetDialog] = useState(false);
 
   // Dark mode state and persistence
@@ -75,7 +76,7 @@ const AppContent = () => {
               title='Reset all data'
               style={{ marginRight: '0.5rem' }}
             >
-              🔄 Reset
+              🔄 {t('buttons.reset')}
             </TrackedButton>
           )}
           <TrackedButton
@@ -85,7 +86,7 @@ const AppContent = () => {
             aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             onClick={() => setDarkMode((prev) => !prev)}
           >
-            {darkMode ? '☀️ Light' : '🌙 Dark'}
+            {darkMode ? t('navigation.themeLight') : t('navigation.themeDark')}
           </TrackedButton>
         </div>
 
@@ -98,10 +99,10 @@ const AppContent = () => {
         />
 
         <nav>
-          <NavLink to='/' end>Home</NavLink>
-          <NavLink to='/questionnaire'>Questionnaire</NavLink>
-          <NavLink to='/domain'>Domain Scan</NavLink>
-          <NavLink to='/report'>Report</NavLink>
+          <NavLink to='/' end>{t('navigation.home')}</NavLink>
+          <NavLink to='/questionnaire'>{t('navigation.questionnaire')}</NavLink>
+          <NavLink to='/domain'>{t('navigation.domainScan')}</NavLink>
+          <NavLink to='/report'>{t('navigation.report')}</NavLink>
           <NavLink to='/data'>Import</NavLink>
         </nav>
         <Routes>

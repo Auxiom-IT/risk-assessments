@@ -1,4 +1,6 @@
 import { useState, useRef, ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../../context/AppStateContext';
 import { TrackedButton } from '../TrackedButton';
 import { trackImport } from '../../utils/analytics';
@@ -11,6 +13,8 @@ interface ToastState {
 }
 
 const Import = () => {
+  const { t } = useTranslation('common');
+  const navigate = useNavigate();
   const { importJSON } = useAppState();
   const [raw, setRaw] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -22,11 +26,17 @@ const Import = () => {
 
   const onImport = () => {
     const result = importJSON(raw);
+
     showToast(
-      result.success ? '✓ Import successful!' : `✕ ${result.error ?? 'Invalid JSON format'}`,
+      result.success ? t('import.successImport') : `${t('import.errorInvalidJSON')} ${result.error ?? ''}`,
       result.success ? 'success' : 'error'
     );
     trackImport('json', result.success);
+
+    // Navigate to questionnaire after successful import
+    if (result.success) {
+      setTimeout(() => navigate('/questionnaire'), 1500);
+    }
   };
 
   const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -35,14 +45,14 @@ const Import = () => {
 
     // Validate file type
     if (!file.name.endsWith('.json')) {
-      showToast('Please select a JSON file', 'error');
+      showToast(t('import.errorFileType'), 'error');
       return;
     }
 
     // Validate file size (e.g., max 5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      showToast('File is too large (max 5MB)', 'error');
+      showToast(t('import.errorFileSize'), 'error');
       return;
     }
 
@@ -52,13 +62,18 @@ const Import = () => {
       setRaw(content);
       const result = importJSON(content);
       showToast(
-        result.success ? '✓ File imported successfully!' : `✕ ${result.error ?? 'Invalid JSON format'}`,
+        result.success ? t('import.successFileImport') : `${t('import.errorInvalidJSON')} ${result.error ?? ''}`,
         result.success ? 'success' : 'error'
       );
       trackImport('json', result.success);
+
+      // Navigate to questionnaire after successful import
+      if (result.success) {
+        setTimeout(() => navigate('/questionnaire'), 1500);
+      }
     };
     reader.onerror = () => {
-      showToast('Error reading file', 'error');
+      showToast(t('import.errorFileRead'), 'error');
     };
     reader.readAsText(file);
 
@@ -70,8 +85,8 @@ const Import = () => {
 
   return (
     <div className='panel'>
-      <h2>Data Import / Export</h2>
-      <p>Use this section to restore a previous assessment or download current results.</p>
+      <h2>{t('import.title')}</h2>
+      <p>{t('import.description')}</p>
 
       <div className='import-methods'>
         <div className='file-upload'>
@@ -80,7 +95,7 @@ const Import = () => {
               trackingName='upload_json_file'
               onClick={() => fileInputRef.current?.click()}
             >
-              Upload JSON File
+              {t('import.uploadFile')}
             </TrackedButton>
           </label>
           <input
@@ -93,17 +108,17 @@ const Import = () => {
           />
         </div>
 
-        <p className='import-divider'>or</p>
+        <p className='import-divider'>{t('import.or')}</p>
 
         <textarea
           rows={8}
-          placeholder='Paste exported JSON here to import'
+          placeholder={t('import.pasteJSON')}
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
         />
         <div className='actions'>
           <TrackedButton trackingName='import_json' onClick={onImport}>
-            Import JSON
+            {t('import.importButton')}
           </TrackedButton>
         </div>
       </div>

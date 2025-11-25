@@ -1,12 +1,13 @@
 // SSL Labs scanner: TLS/SSL configuration analysis using SSLLabs API
 // Note: This scanner uses polling since SSL Labs processes scans asynchronously
 
+import i18next from 'i18next';
 import { DomainScanner, ExecutedScannerResult, ScannerInterpretation, SeverityLevel } from '../../types/domainScan';
 
 export const sslLabsScanner: DomainScanner = {
   id: 'sslLabs',
-  label: 'SSL/TLS Configuration',
-  description: 'Analyzes SSL/TLS configuration using Qualys SSL Labs (may take several minutes)',
+  label: 'sslLabs.label',
+  description: 'sslLabs.description',
   timeout: 600000, // 10 minutes - SSL Labs can take a while with polling
   dataSource: {
     name: 'Qualys SSL Labs',
@@ -114,16 +115,22 @@ export const sslLabsScanner: DomainScanner = {
       if (result.status === 'ERROR') {
         return {
           data: { status: result.status, statusMessage: result.statusMessage },
-          summary: `SSL Labs scan error: ${result.statusMessage || 'Unknown error'}`,
-          issues: [`SSL Labs could not scan this domain: ${result.statusMessage || 'Unknown error'}`]
+          summary: i18next.t(
+            'sslLabs.summary.error',
+            { ns: 'scanners', error: result.statusMessage || 'Unknown error' }
+          ),
+          issues: [i18next.t(
+            'sslLabs.issues.scanError',
+            { ns: 'scanners', error: result.statusMessage || 'Unknown error' }
+          )]
         };
       }
 
       if (result.status !== 'READY') {
         return {
           data: { status: result.status },
-          summary: `SSL Labs scan still in progress (status: ${result.status})`,
-          issues: ['Scan timed out or is still processing. Try again later or visit ssllabs.com for full results.']
+          summary: i18next.t('sslLabs.summary.inProgress', { ns: 'scanners', status: result.status }),
+          issues: [i18next.t('sslLabs.issues.timeout', { ns: 'scanners' })]
         };
       }
 
@@ -133,8 +140,8 @@ export const sslLabsScanner: DomainScanner = {
       if (endpoints.length === 0) {
         return {
           data: { status: result.status, endpoints: [] },
-          summary: 'No SSL/TLS endpoints found',
-          issues: ['No HTTPS endpoints detected for this domain']
+          summary: i18next.t('sslLabs.summary.noEndpoints', { ns: 'scanners' }),
+          issues: [i18next.t('sslLabs.issues.noEndpoints', { ns: 'scanners' })]
         };
       }
 
@@ -173,58 +180,64 @@ export const sslLabsScanner: DomainScanner = {
               p.name === 'TLS' && p.version === '1.1');
 
             if (hasSSLv2 || hasSSLv3) {
-              issues.push(`Endpoint ${endpoint.ipAddress}: Supports deprecated SSL protocols (SSLv2/SSLv3)`);
+              const protocols = [];
+              if (hasSSLv2) protocols.push('SSLv2');
+              if (hasSSLv3) protocols.push('SSLv3');
+              issues.push(i18next.t(
+                'sslLabs.issues.weakProtocols',
+                { ns: 'scanners', protocols: protocols.join(', ') }
+              ));
             }
             if (hasTLS10 || hasTLS11) {
-              warnings.push(`Endpoint ${endpoint.ipAddress}: Supports outdated TLS 1.0/1.1 protocols`);
+              const protocols = [];
+              if (hasTLS10) protocols.push('TLS 1.0');
+              if (hasTLS11) protocols.push('TLS 1.1');
+              warnings.push(i18next.t(
+                'sslLabs.issues.weakProtocols',
+                { ns: 'scanners', protocols: protocols.join(', ') }
+              ));
             }
           }
 
           // Check for vulnerabilities
-          if (details.vulnBeast) {
-            warnings.push(`Endpoint ${endpoint.ipAddress}: Vulnerable to BEAST attack`);
-          }
-          if (details.poodle) {
-            issues.push(`Endpoint ${endpoint.ipAddress}: Vulnerable to POODLE attack`);
-          }
-          if (details.heartbleed) {
-            issues.push(`Endpoint ${endpoint.ipAddress}: Vulnerable to Heartbleed`);
-          }
-          if (details.freak) {
-            issues.push(`Endpoint ${endpoint.ipAddress}: Vulnerable to FREAK attack`);
-          }
-          if (details.logjam) {
-            warnings.push(`Endpoint ${endpoint.ipAddress}: Vulnerable to Logjam attack`);
-          }
-          if (details.drownVulnerable) {
-            issues.push(`Endpoint ${endpoint.ipAddress}: Vulnerable to DROWN attack`);
+          const vulnerabilities = [];
+          if (details.vulnBeast) vulnerabilities.push('BEAST');
+          if (details.poodle) vulnerabilities.push('POODLE');
+          if (details.heartbleed) vulnerabilities.push('Heartbleed');
+          if (details.freak) vulnerabilities.push('FREAK');
+          if (details.logjam) vulnerabilities.push('Logjam');
+          if (details.drownVulnerable) vulnerabilities.push('DROWN');
+
+          if (vulnerabilities.length > 0) {
+            issues.push(i18next.t(
+              'sslLabs.issues.vulnerable',
+              { ns: 'scanners', vulnerabilities: vulnerabilities.join(', ') }
+            ));
           }
 
           // Check certificate issues
           if (details.certChains) {
-            details.certChains.forEach((chain: SSLLabsCertChain, idx: number) => {
-              if (chain.issues) {
-                if (chain.issues & 1) {
-                  warnings.push(`Endpoint ${endpoint.ipAddress}: Certificate chain ${idx + 1} has issues`);
-                }
-              }
-            });
+            const hasCertIssues = details.certChains.some((c: SSLLabsCertChain) => c.issues && (c.issues & 1));
+            if (hasCertIssues) {
+              warnings.push(i18next.t(
+                'sslLabs.issues.certIssues',
+                { ns: 'scanners' }
+              ));
+            }
           }
 
           // Check for forward secrecy
           if (details.forwardSecrecy === 0) {
-            warnings.push(`Endpoint ${endpoint.ipAddress}: Does not support forward secrecy`);
-          } else if (details.forwardSecrecy === 1) {
-            warnings.push(`Endpoint ${endpoint.ipAddress}: Forward secrecy with some browsers only`);
+            warnings.push(i18next.t('sslLabs.issues.noPFS', { ns: 'scanners' }));
           }
 
           // Check for HSTS
           if (!details.hstsPolicy || details.hstsPolicy.status === 'absent') {
-            warnings.push(`Endpoint ${endpoint.ipAddress}: HSTS not configured`);
+            warnings.push(i18next.t('sslLabs.issues.noHSTS', { ns: 'scanners' }));
           } else if (details.hstsPolicy.status === 'present' &&
                      details.hstsPolicy.maxAge &&
                      details.hstsPolicy.maxAge < 15768000) {
-            warnings.push(`Endpoint ${endpoint.ipAddress}: HSTS max-age is too short (should be 6+ months)`);
+            warnings.push(i18next.t('sslLabs.issues.hstsShort', { ns: 'scanners', maxAge: details.hstsPolicy.maxAge }));
           }
         }
       });
@@ -234,10 +247,9 @@ export const sslLabsScanner: DomainScanner = {
       const gradeText = uniqueGrades.length > 0 ? uniqueGrades.join(', ') : 'No grade';
       const allIssues = [...issues, ...warnings];
 
-      let summary = `${endpoints.length} endpoint(s) scanned`;
-      if (uniqueGrades.length > 0) {
-        summary += `, grade(s): ${gradeText}`;
-      }
+      const summary = uniqueGrades.length > 0
+        ? i18next.t('sslLabs.summary.grade', { ns: 'scanners', grade: gradeText })
+        : i18next.t('sslLabs.summary.noEndpoints', { ns: 'scanners' });
 
       // Add data for UI
       const data = {
@@ -271,10 +283,7 @@ export const sslLabsScanner: DomainScanner = {
 };
 
 // Interpretation function for SSL Labs scanner results
-export const interpretSslLabsResult = (
-  scanner: ExecutedScannerResult,
-  issueCount: number
-): ScannerInterpretation => {
+export const interpretSslLabsResult = (scanner: ExecutedScannerResult): ScannerInterpretation => {
   const data = scanner.data as {
     status?: string;
     grades?: string[];
@@ -287,63 +296,45 @@ export const interpretSslLabsResult = (
   if (data?.status === 'ERROR') {
     return {
       severity: 'error',
-      message: 'SSL Labs could not scan this domain',
-      recommendation: 'The domain may not support HTTPS or SSL Labs cannot reach it. ' +
-        'Verify the domain is accessible.'
+      message: i18next.t('sslLabs.interpretation.error.message', { ns: 'scanners' }),
+      recommendation: i18next.t('sslLabs.interpretation.error.recommendation', { ns: 'scanners' })
     };
   }
 
   if (data?.status !== 'READY') {
     return {
       severity: 'info',
-      message: 'SSL Labs scan in progress',
-      recommendation: data?.testUrl
-        ? `Visit ${data.testUrl} to see the scan progress and full results.`
-        : 'Try scanning again in a few minutes for complete results.'
+      message: i18next.t('sslLabs.interpretation.error.message', { ns: 'scanners' }),
+      recommendation: i18next.t('sslLabs.interpretation.error.recommendation', { ns: 'scanners' })
     };
   }
 
   const lowestGrade = data?.lowestGrade;
-  const gradeMap: Record<string, { severity: SeverityLevel; message: string }> = {
-    'A+': { severity: 'success', message: 'Excellent SSL/TLS configuration (A+)' },
-    'A': { severity: 'success', message: 'Excellent SSL/TLS configuration (A)' },
-    'A-': { severity: 'success', message: 'Good SSL/TLS configuration (A-)' },
-    'B': { severity: 'warning', message: 'Acceptable SSL/TLS configuration (B)' },
-    'C': { severity: 'warning', message: 'Mediocre SSL/TLS configuration (C)' },
-    'D': { severity: 'critical', message: 'Weak SSL/TLS configuration (D)' },
-    'E': { severity: 'critical', message: 'Poor SSL/TLS configuration (E)' },
-    'F': { severity: 'critical', message: 'Failed SSL/TLS configuration (F)' },
-    'T': { severity: 'critical', message: 'Certificate trust issues (T)' },
-    'M': { severity: 'critical', message: 'Certificate name mismatch (M)' }
-  };
+  let severity: SeverityLevel;
+  let message: string;
+  let recommendation: string;
 
-  const gradeInfo = (lowestGrade && gradeMap[lowestGrade]) || {
-    severity: 'info' as SeverityLevel,
-    message: 'SSL/TLS configuration analyzed'
-  };
-
-  let recommendation = '';
   if (lowestGrade && ['A+', 'A', 'A-'].includes(lowestGrade)) {
-    recommendation = 'Your SSL/TLS configuration follows security best practices. ';
-  } else if (lowestGrade && ['B', 'C'].includes(lowestGrade)) {
-    recommendation = 'Your SSL/TLS configuration could be improved. Consider upgrading cipher suites, ' +
-      'disabling older protocols, and enabling HSTS. ';
-  } else if (lowestGrade && ['D', 'E', 'F', 'T', 'M'].includes(lowestGrade)) {
-    recommendation = 'Your SSL/TLS configuration has serious issues that need immediate attention. ' +
-      'Update your TLS configuration, disable weak ciphers and outdated protocols. ';
-  }
-
-  if (issueCount > 0) {
-    recommendation += `${issueCount} specific issue(s) detected - review them below. `;
-  }
-
-  if (data?.testUrl) {
-    recommendation += 'View the complete SSL Labs report for detailed recommendations.';
+    severity = 'success';
+    message = i18next.t('sslLabs.interpretation.gradeA.message', { ns: 'scanners' });
+    recommendation = i18next.t('sslLabs.interpretation.gradeA.recommendation', { ns: 'scanners' });
+  } else if (lowestGrade && ['B'].includes(lowestGrade)) {
+    severity = 'warning';
+    message = i18next.t('sslLabs.interpretation.gradeB.message', { ns: 'scanners' });
+    recommendation = i18next.t('sslLabs.interpretation.gradeB.recommendation', { ns: 'scanners' });
+  } else if (lowestGrade && ['C'].includes(lowestGrade)) {
+    severity = 'warning';
+    message = i18next.t('sslLabs.interpretation.gradeC.message', { ns: 'scanners' });
+    recommendation = i18next.t('sslLabs.interpretation.gradeC.recommendation', { ns: 'scanners' });
+  } else {
+    severity = 'critical';
+    message = i18next.t('sslLabs.interpretation.gradeDF.message', { ns: 'scanners' });
+    recommendation = i18next.t('sslLabs.interpretation.gradeDF.recommendation', { ns: 'scanners' });
   }
 
   return {
-    severity: gradeInfo.severity,
-    message: gradeInfo.message,
-    recommendation: recommendation || 'SSL/TLS configuration analyzed. Review any issues detected.'
+    severity,
+    message,
+    recommendation
   };
 };

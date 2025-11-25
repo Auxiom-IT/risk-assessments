@@ -11,37 +11,6 @@ vi.mock('@amplitude/analytics-browser', () => ({
   logEvent: vi.fn()
 }));
 
-// Mock the questions data
-vi.mock('../data/questions.json', () => ({
-  default: {
-    questions: [
-      {
-        id: 'q1',
-        text: 'Test Question 1',
-        category: 'Test Category',
-        options: [
-          { option: 'Low', risk: 'high', points: 0 },
-          { option: 'Medium', risk: 'medium', points: 5 },
-          { option: 'High', risk: 'low', points: 10 }
-        ]
-      },
-      {
-        id: 'q2',
-        text: 'Test Question 2',
-        category: 'Test Category',
-        recommendationMap: {
-          'Low': ['rec1'],
-          'High': ['rec2']
-        },
-        options: [
-          { option: 'Low', risk: 'high', points: 0 },
-          { option: 'High', risk: 'low', points: 10 }
-        ]
-      }
-    ]
-  }
-}));
-
 // Mock scanners
 vi.mock('../utils/scanners', () => ({
   SCANNERS: [{ id: 'dns', label: 'DNS', run: vi.fn() }],
@@ -74,13 +43,13 @@ describe('AppStateContext', () => {
     it('should initialize with empty answers and default score', () => {
       const { result } = renderHook(() => useAppState(), { wrapper });
       expect(result.current.answers).toEqual({});
-      expect(result.current.questions).toHaveLength(2);
+      expect(result.current.questions).toHaveLength(20);
       expect(result.current.score.total).toBe(0);
     });
 
     it('should load answers from localStorage', () => {
       const savedAnswers = { q1: 'Medium', q2: 'High' };
-      localStorageMock['risk_answers_v1'] = JSON.stringify(savedAnswers);
+      localStorageMock['risk_answers_v2'] = JSON.stringify(savedAnswers);
       const { result } = renderHook(() => useAppState(), { wrapper });
       expect(result.current.answers).toEqual(savedAnswers);
     });
@@ -89,13 +58,13 @@ describe('AppStateContext', () => {
       const savedScan: DomainScanAggregate = {
         domain: 'example.com', timestamp: '2025-10-27T00:00:00.000Z', scanners: [], issues: []
       };
-      localStorageMock['risk_domain_scan_agg_v1'] = JSON.stringify(savedScan);
+      localStorageMock['risk_domain_scan_agg_v2'] = JSON.stringify(savedScan);
       const { result } = renderHook(() => useAppState(), { wrapper });
       expect(result.current.domainScanAggregate).toEqual(savedScan);
     });
 
     it('should handle corrupted localStorage data gracefully', () => {
-      localStorageMock['risk_answers_v1'] = 'invalid json{';
+      localStorageMock['risk_answers_v2'] = 'invalid json{';
       const { result } = renderHook(() => useAppState(), { wrapper });
       expect(result.current.answers).toEqual({});
     });
@@ -108,7 +77,7 @@ describe('AppStateContext', () => {
         result.current.setAnswer('q1', 'Medium');
       });
       expect(result.current.answers).toEqual({ q1: 'Medium' });
-      expect(localStorage.setItem).toHaveBeenCalledWith('risk_answers_v1', JSON.stringify({ q1: 'Medium' }));
+      expect(localStorage.setItem).toHaveBeenCalledWith('risk_answers_v2', JSON.stringify({ q1: 'Medium' }));
     });
 
     it('should track analytics event', () => {
@@ -122,13 +91,13 @@ describe('AppStateContext', () => {
 
   describe('resetAnswers', () => {
     it('should clear all answers and remove from localStorage', () => {
-      localStorageMock['risk_answers_v1'] = JSON.stringify({ q1: 'Medium' });
+      localStorageMock['risk_answers_v2'] = JSON.stringify({ q1: 'Medium' });
       const { result } = renderHook(() => useAppState(), { wrapper });
       act(() => {
         result.current.resetAnswers();
       });
       expect(result.current.answers).toEqual({});
-      expect(localStorage.removeItem).toHaveBeenCalledWith('risk_answers_v1');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('risk_answers_v2');
     });
 
     it('should track analytics event', () => {
@@ -148,8 +117,8 @@ describe('AppStateContext', () => {
       });
       expect(result.current.answers).toEqual({});
       expect(result.current.domainScanAggregate).toBeUndefined();
-      expect(localStorage.removeItem).toHaveBeenCalledWith('risk_answers_v1');
-      expect(localStorage.removeItem).toHaveBeenCalledWith('risk_domain_scan_agg_v1');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('risk_answers_v2');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('risk_domain_scan_agg_v2');
     });
 
     it('should track analytics event', () => {
@@ -165,13 +134,13 @@ describe('AppStateContext', () => {
     it('should compute score based on answers', () => {
       const { result } = renderHook(() => useAppState(), { wrapper });
       act(() => {
-        result.current.setAnswer('q1', 'Medium'); // 5 points
+        result.current.setAnswer('governance_program_management_q1', 'opt1'); // 5 points
       });
-      expect(result.current.score.total).toBe(5);
+      expect(result.current.score.total).toBe(16);
       act(() => {
-        result.current.setAnswer('q2', 'High'); // 10 points
+        result.current.setAnswer('governance_program_management_q2', 'opt1'); // 10 points
       });
-      expect(result.current.score.total).toBe(15);
+      expect(result.current.score.total).toBe(41);
     });
   });
 
@@ -189,7 +158,7 @@ describe('AppStateContext', () => {
 
       expect(runAllScanners).toHaveBeenCalledWith('example.com', expect.any(Function));
       expect(result.current.domainScanAggregate).toEqual(mockAggregate);
-      expect(localStorage.setItem).toHaveBeenCalledWith('risk_domain_scan_agg_v1', JSON.stringify(mockAggregate));
+      expect(localStorage.setItem).toHaveBeenCalledWith('risk_domain_scan_agg_v2', JSON.stringify(mockAggregate));
       expect(result.current.scannerProgress).toEqual([]);
     });
   });
@@ -210,14 +179,23 @@ describe('AppStateContext', () => {
   describe('importJSON', () => {
     it('should import valid data and update state', () => {
       const { result } = renderHook(() => useAppState(), { wrapper });
-      const importData = JSON.stringify({ answers: { q1: 'High', q2: 'Low' } });
+      const importData = JSON.stringify({ answers: {
+        governance_program_management_q1: 'opt0',
+        governance_program_management_q2: 'opt1',
+      } });
       let importResult: { success: boolean; error?: string } = { success: false };
       act(() => {
         importResult = result.current.importJSON(importData);
       });
       expect(importResult.success).toBe(true);
-      expect(result.current.answers).toEqual({ q1: 'High', q2: 'Low' });
-      expect(localStorage.setItem).toHaveBeenCalledWith('risk_answers_v1', JSON.stringify({ q1: 'High', q2: 'Low' }));
+      expect(result.current.answers).toEqual({
+        governance_program_management_q1: 'opt0',
+        governance_program_management_q2: 'opt1',
+      });
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'risk_answers_v2',
+        JSON.stringify({ governance_program_management_q1: 'opt0', governance_program_management_q2: 'opt1' },
+      ));
     });
 
     it('should handle invalid JSON', () => {
@@ -315,7 +293,7 @@ describe('AppStateContext', () => {
       });
       expect(importResult.success).toBe(true);
       expect(result.current.domainScanAggregate).toEqual(mockAggregate);
-      expect(localStorage.setItem).toHaveBeenCalledWith('risk_domain_scan_agg_v1', JSON.stringify(mockAggregate));
+      expect(localStorage.setItem).toHaveBeenCalledWith('risk_domain_scan_agg_v2', JSON.stringify(mockAggregate));
     });
 
     it('should reject domain scan aggregate with missing required fields', () => {
@@ -349,7 +327,7 @@ describe('AppStateContext', () => {
         issues: []
       };
       const importData = JSON.stringify({
-        answers: { q1: 'High' },
+        answers: { governance_program_management_q1: 'No formal information security policies exist' },
         domainScanAggregate: mockAggregate
       });
       let importResult: { success: boolean; error?: string } = { success: false };
@@ -357,7 +335,7 @@ describe('AppStateContext', () => {
         importResult = result.current.importJSON(importData);
       });
       expect(importResult.success).toBe(true);
-      expect(result.current.answers).toEqual({ q1: 'High' });
+      expect(result.current.answers).toEqual({ governance_program_management_q1: 'opt0' });
       expect(result.current.domainScanAggregate).toEqual(mockAggregate);
     });
 

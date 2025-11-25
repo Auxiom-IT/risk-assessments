@@ -17,7 +17,7 @@ beforeEach(() => {
 describe('emailAuthScanner', () => {
   it('should have correct scanner metadata', () => {
     expect(emailAuthScanner.id).toBe('emailAuth');
-    expect(emailAuthScanner.label).toBe('Email Authentication');
+    expect(emailAuthScanner.label).toBe('emailAuth.label');
     expect(emailAuthScanner.description).toBeDefined();
     expect(emailAuthScanner.timeout).toBe(10000);
     expect(emailAuthScanner.dataSource).toBeDefined();
@@ -383,7 +383,7 @@ describe('emailAuthScanner', () => {
 
     const result = await emailAuthScanner.run('example.com');
 
-    expect(result.summary).toContain('Partial email authentication');
+    expect(result.summary).toContain('Partial email authentication - missing: DMARC, DKIM');
     expect(result.summary).toContain('DMARC');
     expect(result.summary).toContain('DKIM');
   });
@@ -397,7 +397,7 @@ describe('interpretEmailAuthResult', () => {
     dmarcEnforced?: boolean;
   }) => ({
     id: 'emailAuth',
-    label: 'Email Authentication',
+    label: 'emailAuth.label',
     status: 'complete' as const,
     startedAt: new Date().toISOString(),
     finishedAt: new Date().toISOString(),
@@ -416,7 +416,7 @@ describe('interpretEmailAuthResult', () => {
     const interpretation = interpretEmailAuthResult(scanner, 0);
 
     expect(interpretation.severity).toBe('success');
-    expect(interpretation.message).toMatch(/email authentication/i);
+    expect(interpretation.message).toMatch(/Email authentication configured/i);
     expect(interpretation.recommendation).toContain('Excellent');
   });
 

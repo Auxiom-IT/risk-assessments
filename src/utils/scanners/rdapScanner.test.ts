@@ -11,7 +11,7 @@ beforeEach(() => {
 describe('rdapScanner', () => {
   it('should have correct scanner metadata', () => {
     expect(rdapScanner.id).toBe('rdap');
-    expect(rdapScanner.label).toBe('Domain Registration (RDAP)');
+    expect(rdapScanner.label).toBe('rdap.label');
     expect(rdapScanner.description).toBeDefined();
     expect(rdapScanner.timeout).toBe(10000);
     expect(rdapScanner.dataSource).toBeDefined();
@@ -135,7 +135,7 @@ describe('rdapScanner', () => {
 
     const result = await rdapScanner.run('example.com');
 
-    expect(result.issues?.some((issue) => issue.includes('DNSSEC is not enabled'))).toBe(true);
+    expect(result.issues?.some((issue) => issue.includes('DNSSEC not enabled'))).toBe(true);
   });
 
   it('should detect problematic domain statuses', async () => {
@@ -215,7 +215,7 @@ describe('rdapScanner', () => {
     const result = await rdapScanner.run('example.com');
 
     expect(result.summary).toBe('RDAP lookup failed');
-    expect(result.issues?.some((issue) => issue.includes('Failed to retrieve RDAP'))).toBe(true);
+    expect(result.issues?.some((issue) => issue.includes('Could not retrieve RDAP'))).toBe(true);
   });
 
   it('should handle domain not found in RDAP', async () => {

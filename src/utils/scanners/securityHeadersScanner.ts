@@ -1,11 +1,12 @@
-// Security Headers scanner: Fetches and parses results from securityheaders.com
+// Security Headers Scanner: checks for presence of key security headers
 
+import i18next from 'i18next';
 import { DomainScanner, ExecutedScannerResult, ScannerInterpretation } from '../../types/domainScan';
 
 export const securityHeadersScanner: DomainScanner = {
   id: 'securityHeaders',
-  label: 'Security Headers',
-  description: 'Analyzes HTTP security headers using securityheaders.com',
+  label: 'securityHeaders.label',
+  description: 'securityHeaders.description',
   timeout: 15000, // 15 seconds - external service
   dataSource: {
     name: 'securityheaders.com',
@@ -63,7 +64,7 @@ export const securityHeadersScanner: DomainScanner = {
           const headerName = match[1].trim();
           if (headerName && !missingHeaders.includes(headerName)) {
             missingHeaders.push(headerName);
-            issues.push(`Missing security header: ${headerName}`);
+            issues.push(i18next.t('securityHeaders.issues.missing', { ns: 'scanners', header: headerName }));
           }
         }
       }
@@ -94,14 +95,14 @@ export const securityHeadersScanner: DomainScanner = {
       // Build summary
       let summary = '';
       if (grade) {
-        summary = `Grade: ${grade}`;
+        summary = i18next.t('securityHeaders.summary.grade', { ns: 'scanners', grade });
         if (score !== null) {
-          summary += ` (${score}/100)`;
+          summary += i18next.t('securityHeaders.summary.score', { ns: 'scanners', score });
         }
       } else if (score !== null) {
-        summary = `Score: ${score}/100`;
+        summary = i18next.t('securityHeaders.summary.grade', { ns: 'scanners', grade: score + '/100' });
       } else {
-        summary = 'Security headers analyzed';
+        summary = i18next.t('securityHeaders.summary.analyzed', { ns: 'scanners' });
       }
 
       const data = {
@@ -133,62 +134,51 @@ export const securityHeadersScanner: DomainScanner = {
           error: errorMessage,
           testUrl
         },
-        summary: 'Security headers check unavailable',
-        issues: [`Could not retrieve security headers analysis: ${errorMessage}`]
+        summary: i18next.t('securityHeaders.summary.unavailable', { ns: 'scanners' }),
+        issues: [i18next.t('securityHeaders.issues.unavailable', { ns: 'scanners', error: errorMessage })]
       };
     }
   }
 };
 
 // Interpretation function for Security Headers scanner results
-export const interpretSecurityHeadersResult = (
-  scanner: ExecutedScannerResult,
-  issueCount: number
-): ScannerInterpretation => {
+export const interpretSecurityHeadersResult = (scanner: ExecutedScannerResult): ScannerInterpretation => {
   const data = scanner.data as { status?: string; grade?: string; score?: number; testUrl?: string };
   if (data?.status === 'unavailable') {
     return {
       severity: 'info',
-      message: 'Headers check unavailable',
-      recommendation: data.testUrl
-        ? `Visit ${data.testUrl} for a comprehensive security headers analysis.`
-        : 'Visit securityheaders.com for a full analysis.'
+      message: i18next.t('securityHeaders.interpretation.unavailable.message', { ns: 'scanners' }),
+      recommendation: i18next.t('securityHeaders.interpretation.unavailable.recommendation', { ns: 'scanners' })
     };
   }
 
   // Grade-based interpretation
   const grade = data?.grade || 'Unknown';
-  const gradeMap: Record<string, { severity: 'success' | 'info' | 'warning' | 'critical'; message: string }> = {
-    'A+': { severity: 'success', message: 'Excellent security headers (A+)' },
-    'A': { severity: 'success', message: 'Great security headers (A)' },
-    'B': { severity: 'info', message: 'Good security headers (B)' },
-    'C': { severity: 'warning', message: 'Moderate security headers (C)' },
-    'D': { severity: 'warning', message: 'Weak security headers (D)' },
-    'E': { severity: 'critical', message: 'Poor security headers (E)' },
-    'F': { severity: 'critical', message: 'Failed security headers (F)' },
-  };
+  let severity: 'success' | 'info' | 'warning' | 'critical';
+  let message: string;
+  let recommendation: string;
 
-  const gradeInfo = gradeMap[grade] || {
-    severity: 'info' as const,
-    message: `Security headers analyzed (${grade})`
-  };
-
-  let recommendation = '';
   if (['A+', 'A'].includes(grade)) {
-    recommendation = 'Your site has excellent security headers protecting against common web vulnerabilities. ';
-  } else if (['B', 'C'].includes(grade)) {
-    recommendation = 'Consider strengthening your security headers. ';
-  } else if (['D', 'E', 'F'].includes(grade)) {
-    recommendation = 'Your security headers need immediate attention. ';
-  }
-
-  if (issueCount > 0) {
-    recommendation += `Missing ${issueCount} critical header(s). `;
+    severity = 'success';
+    message = i18next.t('securityHeaders.interpretation.gradeA.message', { ns: 'scanners' });
+    recommendation = i18next.t('securityHeaders.interpretation.gradeA.recommendation', { ns: 'scanners' });
+  } else if (grade === 'B') {
+    severity = 'info';
+    message = i18next.t('securityHeaders.interpretation.gradeB.message', { ns: 'scanners' });
+    recommendation = i18next.t('securityHeaders.interpretation.gradeB.recommendation', { ns: 'scanners' });
+  } else if (grade === 'C') {
+    severity = 'warning';
+    message = i18next.t('securityHeaders.interpretation.gradeC.message', { ns: 'scanners' });
+    recommendation = i18next.t('securityHeaders.interpretation.gradeC.recommendation', { ns: 'scanners' });
+  } else {
+    severity = 'critical';
+    message = i18next.t('securityHeaders.interpretation.gradeDF.message', { ns: 'scanners' });
+    recommendation = i18next.t('securityHeaders.interpretation.gradeDF.recommendation', { ns: 'scanners' });
   }
 
   return {
-    severity: gradeInfo.severity,
-    message: gradeInfo.message,
-    recommendation: recommendation || 'Visit securityheaders.com for detailed analysis.'
+    severity,
+    message,
+    recommendation
   };
 };

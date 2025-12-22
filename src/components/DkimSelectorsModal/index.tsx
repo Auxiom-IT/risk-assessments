@@ -158,7 +158,7 @@ const DkimSelectorsModal: React.FC<DkimSelectorsModalProps> = ({
                     <span className="dkim-selector-name">{selector}</span>
                     <button
                       className="dkim-remove-btn"
-                      data-testId={`remove-selector-${selector}`}
+                      data-testid={`remove-selector-${selector}`}
                       onClick={() => handleRemoveSelector(selector)}
                       aria-label={`Remove ${selector}`}
                     >

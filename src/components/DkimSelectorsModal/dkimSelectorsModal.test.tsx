@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DkimSelectorsModal from './index';
+import '../../test-utils/i18n-setup';
 
 describe('DkimSelectorsModal', () => {
   const defaultProps = {
@@ -29,7 +30,7 @@ describe('DkimSelectorsModal', () => {
   });
 
   it('displays domain in modal content', () => {
-    render(<DkimSelectorsModal {...defaultProps} domain="test.com" />);
+    render(<DkimSelectorsModal {...defaultProps} domain='test.com' />);
     expect(screen.getByText(/test.com/)).toBeTruthy();
   });
 
@@ -131,7 +132,7 @@ describe('DkimSelectorsModal', () => {
       const addButton = screen.getByText('Add');
       fireEvent.click(addButton);
 
-      expect(screen.getByText('Selector can only contain letters, numbers, and hyphens')).toBeTruthy();
+      expect(screen.getByText(/Selector must start and end with a letter or number/)).toBeTruthy();
     });
 
     it('prevents duplicate selectors', () => {

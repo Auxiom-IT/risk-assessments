@@ -202,30 +202,35 @@ export const interpretCertificateResult = (
 
   if (certCount === 0) {
     severity = 'info';
-    message = 'No certificates found';
-    recommendation = 'No SSL certificates found in public certificate transparency logs. ' +
-      'If you use HTTPS, this might indicate a very new certificate or the certificate is not yet logged.';
+    message = i18next.t('certificates.interpretation.noCerts.message', { ns: 'scanners' });
+    recommendation = i18next.t('certificates.interpretation.noCerts.recommendation', { ns: 'scanners' });
   } else if (expiringIn7Days > 0) {
     severity = 'critical';
-    message = `${expiringIn7Days} certificate(s) expiring within 7 days!`;
-    recommendation = 'Renew expiring certificates immediately to avoid service disruption. ' +
-      'Consider setting up automated renewal (e.g., using Let\'s Encrypt with auto-renewal).';
+    message = i18next.t(
+      'certificates.interpretation.expiring7Days.message',
+      { ns: 'scanners', count: expiringIn7Days }
+    );
+    recommendation = i18next.t('certificates.interpretation.expiring7Days.recommendation', { ns: 'scanners' });
   } else if (expiringIn30Days > 0) {
     severity = 'warning';
-    message = `${expiringIn30Days} certificate(s) expiring within 30 days`;
-    recommendation = 'Plan to renew certificates soon to avoid last-minute issues. ' +
-      'Set up monitoring alerts for certificate expiration.';
+    message = i18next.t(
+      'certificates.interpretation.expiring30Days.message',
+      { ns: 'scanners', count: expiringIn30Days }
+    );
+    recommendation = i18next.t('certificates.interpretation.expiring30Days.recommendation', { ns: 'scanners' });
   } else if (issueCount > 0) {
     severity = 'warning';
-    message = `${activeCertCount} active certificate(s), ${issueCount} issue(s) detected`;
-    recommendation = 'Review the certificate issues below. Consider cleaning up expired certificates ' +
-      'and standardizing on a single Certificate Authority.';
+    message = i18next.t(
+      'certificates.interpretation.issuesDetected.message',
+      { ns: 'scanners', activeCertCount, issueCount }
+    );
+    recommendation = i18next.t('certificates.interpretation.issuesDetected.recommendation', { ns: 'scanners' });
   } else {
     severity = 'success';
-    message = `${activeCertCount} valid certificate(s) found`;
+    message = i18next.t('certificates.interpretation.validCerts.message', { ns: 'scanners', count: activeCertCount });
     recommendation = activeCertCount > 50
-      ? 'Large number of certificates found. Regularly review and remove unnecessary certificates.'
-      : 'Certificate transparency logs show your domain has valid SSL certificates with no immediate issues.';
+      ? i18next.t('certificates.interpretation.validCerts.recommendationMany', { ns: 'scanners' })
+      : i18next.t('certificates.interpretation.validCerts.recommendationNormal', { ns: 'scanners' });
   }
 
   return {

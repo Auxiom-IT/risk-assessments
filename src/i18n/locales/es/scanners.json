@@ -148,6 +148,29 @@
       "active": ", {{active}} actualmente activos",
       "expired": ", {{expired}} expirados",
       "none": "No se encontraron certificados en los registros de transparencia"
+    },
+    "interpretation": {
+      "noCerts": {
+        "message": "No se encontraron certificados",
+        "recommendation": "No se encontraron certificados SSL en los registros públicos de transparencia de certificados. Si usa HTTPS, esto podría indicar un certificado muy nuevo o que el certificado aún no está registrado."
+      },
+      "expiring7Days": {
+        "message": "¡{{count}} certificado(s) expiran dentro de 7 días!",
+        "recommendation": "Renueve los certificados que expiran inmediatamente para evitar interrupciones del servicio. Considere configurar la renovación automatizada (por ejemplo, usando Let's Encrypt con renovación automática)."
+      },
+      "expiring30Days": {
+        "message": "{{count}} certificado(s) expiran dentro de 30 días",
+        "recommendation": "Planee renovar los certificados pronto para evitar problemas de último momento. Configure alertas de monitoreo para la expiración de certificados."
+      },
+      "issuesDetected": {
+        "message": "{{activeCertCount}} certificado(s) activo(s), {{issueCount}} problema(s) detectado(s)",
+        "recommendation": "Revise los problemas de certificados a continuación. Considere limpiar los certificados expirados y estandarizar en una única Autoridad Certificadora."
+      },
+      "validCerts": {
+        "message": "Se encontraron {{count}} certificado(s) válido(s)",
+        "recommendationMany": "Se encontró un gran número de certificados. Revise y elimine regularmente los certificados innecesarios.",
+        "recommendationNormal": "Los registros de transparencia de certificados muestran que su dominio tiene certificados SSL válidos sin problemas inmediatos."
+      }
     }
   },
   "securityHeaders": {

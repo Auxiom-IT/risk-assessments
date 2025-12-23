@@ -172,7 +172,13 @@
     "allIssues": "Todos los Problemas",
     "noIssuesDetected": "✓ No se detectaron problemas - ¡Su configuración de dominio se ve bien!",
     "disclaimer": "Aviso: Algunas verificaciones (cadena SSL completa, encabezados exhaustivos, datos de brechas) requieren backend o claves API no incluidas en esta herramienta estática gratuita.",
-    "errorPrefix": "Error:"
+    "errorPrefix": "Error:",
+    "dkimPrompt": {
+      "description": "La verificación DKIM requiere selectores específicos del correo electrónico. Agregue sus selectores DKIM para mejorar la precisión del escaneo.",
+      "manageButton": "Administrar Selectores"
+    },
+    "viewFullSSLReport": "📊 Ver Informe Completo de SSL Labs →",
+    "viewFullSecurityHeadersReport": "📊 Ver Informe Completo en securityheaders.com →"
   },
   "import": {
     "title": "Importar / Exportar Datos",
@@ -212,5 +218,32 @@
     "exportDescription": "Sus datos se descargarán como un archivo JSON. Puede importarlo más tarde para restaurar su progreso.",
     "exportAfterNote": "Después de completarse la descarga, todos los datos locales serán eliminados.",
     "downloadResetButton": "Descargar y Reiniciar"
+  },
+  "dkimModal": {
+    "title": "Administrar Selectores DKIM",
+    "infoBanner": {
+      "description": "Los selectores DKIM varían según el proveedor de correo. Agregue selectores conocidos o extráigalos de un correo electrónico.",
+      "domain": "Dominio:"
+    },
+    "currentSelectors": "Selectores Actuales ({{count}})",
+    "addManually": "Agregar Selector Manualmente",
+    "selectorPlaceholder": "ej., default, google, k1",
+    "addButton": "Agregar",
+    "removeSelector": "Eliminar {{selector}}",
+    "extractFromEmail": "Extraer del Código Fuente del Correo",
+    "hideEmailSource": "Ocultar Código Fuente del Correo",
+    "extractHelp": "Para obtener el código fuente del correo: Abra un correo → Más opciones → Mostrar original / Ver código fuente",
+    "emailSourcePlaceholder": "Pegue los encabezados o el código fuente completo del correo aquí...",
+    "extractButton": "Extraer Selectores",
+    "saveButton": "Guardar Selectores",
+    "errors": {
+      "selectorEmpty": "El selector no puede estar vacío",
+      "selectorTooLong": "El selector debe tener 63 caracteres o menos",
+      "selectorInvalid": "El selector debe comenzar y terminar con una letra o número, y solo puede contener letras, números y guiones",
+      "selectorDuplicate": "Selector ya agregado",
+      "emailSourceEmpty": "Por favor pegue los encabezados o código fuente del correo",
+      "noSelectorsFound": "No se encontraron selectores DKIM en el código fuente del correo",
+      "noSelectors": "Por favor agregue al menos un selector"
+    }
   }
 }

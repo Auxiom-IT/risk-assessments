@@ -168,7 +168,7 @@ const DomainScanner = () => {
                               rel='noopener noreferrer'
                               className='btn-link'
                             >
-                              📊 View Full SSL Labs Report →
+                              {t('domainScanner.viewFullSSLReport')}
                             </a>
                           </div>
                           )
@@ -184,7 +184,7 @@ const DomainScanner = () => {
                               rel='noopener noreferrer'
                               className='btn-link'
                             >
-                              📊 View Full Report at securityheaders.com →
+                              {t('domainScanner.viewFullSecurityHeadersReport')}
                             </a>
                           </div>
                           )
@@ -208,8 +208,7 @@ const DomainScanner = () => {
                 {/* DKIM Selector Management Prompt */}
                 {s.id === 'emailAuth' && prog?.status === 'complete' &&
                  prog.issues && prog.issues.some((issue: string) =>
-                   issue.toLowerCase().includes('dkim') &&
-                   (issue.toLowerCase().includes('not detected') || issue.toLowerCase().includes('selectors'))
+                   issue === t('emailAuth.issues.noDKIM', { ns: 'scanners' })
                  ) && currentDomain && (
                   <div className='scanner-dkim-prompt'>
                     <svg className='info-icon' viewBox='0 0 24 24' fill='currentColor'>
@@ -222,8 +221,7 @@ const DomainScanner = () => {
                     </svg>
                     <div className='prompt-content'>
                       <span>
-                        DKIM verification requires email-specific selectors.
-                        {' '}Add your DKIM selectors to improve scan accuracy.
+                        {t('domainScanner.dkimPrompt.description')}
                       </span>
                       <button type='button' onClick={handleOpenDkimModal} className='manage-selectors-btn'>
                         <svg className='btn-icon' viewBox='0 0 24 24' fill='currentColor'>
@@ -242,7 +240,7 @@ const DomainScanner = () => {
                             }
                           />
                         </svg>
-                        Manage Selectors
+                        {t('domainScanner.dkimPrompt.manageButton')}
                       </button>
                     </div>
                   </div>

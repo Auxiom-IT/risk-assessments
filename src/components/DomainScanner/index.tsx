@@ -58,7 +58,12 @@ const DomainScanner = () => {
 
   const handleSaveDkimSelectors = async (selectors: string[]) => {
     if (currentDomain) {
-      saveDkimSelectors(currentDomain, selectors);
+      const saved = saveDkimSelectors(currentDomain, selectors);
+      if (!saved) {
+        // Show an error if saving selectors failed (e.g., localStorage unavailable/full)
+        setError(t('domainScanner.errors.scanFailed'));
+        return;
+      }
       setShowDkimModal(false);
       // Trigger a rescan to check with new selectors
       setLoading(true);

@@ -90,8 +90,8 @@ const DkimSelectorsModal: React.FC<DkimSelectorsModalProps> = ({
     const extracted: string[] = [];
     dkimHeaders.forEach((header) => {
       // Within each DKIM-Signature header, extract the selector value after s=
-      // Match s= followed by alphanumeric/hyphens, bounded by semicolon, space, or end
-      const selectorMatch = header.match(/\bs=([a-z0-9-]+)(?:[;\s]|$)/i);
+      // Match s= preceded by start-of-string, semicolon, or whitespace, and followed by selector chars
+      const selectorMatch = header.match(/(?:^|[;\s])s=([a-z0-9-]+)(?=[;\s]|$)/i);
       if (selectorMatch && selectorMatch[1]) {
         extracted.push(selectorMatch[1]);
       }
@@ -144,7 +144,7 @@ const DkimSelectorsModal: React.FC<DkimSelectorsModalProps> = ({
     >
       <div className='dkim-modal'>
         <div className='dkim-modal-header'>
-          <h2 id='dkim-modal-title'>Manage DKIM Selectors</h2>
+          <h2 id='dkim-modal-title'>{t('dkimModal.title')}</h2>
           <button
             className='dkim-modal-close'
             onClick={onClose}
@@ -167,8 +167,9 @@ const DkimSelectorsModal: React.FC<DkimSelectorsModalProps> = ({
               />
             </svg>
             <p>
-              {t('dkimModal.infoBanner.description')}
-              ({t('dkimModal.infoBanner.domain')}) <strong>{domain}</strong>
+              {t('dkimModal.infoBanner.description')}{' '}
+              {t('dkimModal.infoBanner.domain')}:{' '}
+              <strong>{domain}</strong>
             </p>
           </div>
 
@@ -209,11 +210,11 @@ const DkimSelectorsModal: React.FC<DkimSelectorsModalProps> = ({
                   value={newSelector}
                   onChange={(e) => setNewSelector(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder='e.g., default, google, k1'
+                  placeholder={t('dkimModal.selectorPlaceholder')}
                   className={errors.selector ? 'error' : ''}
                 />
                 <button className='dkim-add-btn' onClick={handleAddSelector}>
-                  Add
+                  {t('dkimModal.addButton')}
                 </button>
               </div>
               {errors.selector && <div className='dkim-error-text'>{errors.selector}</div>}

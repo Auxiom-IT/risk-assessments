@@ -172,7 +172,13 @@
     "allIssues": "All Issues",
     "noIssuesDetected": "✓ No issues detected - Your domain configuration looks good!",
     "disclaimer": "Disclaimer: Some checks (full SSL chain, exhaustive headers, breach data) require backend or API keys not included in this free static tool.",
-    "errorPrefix": "Error:"
+    "errorPrefix": "Error:",
+    "dkimPrompt": {
+      "description": "DKIM verification requires email-specific selectors. Add your DKIM selectors to improve scan accuracy.",
+      "manageButton": "Manage Selectors"
+    },
+    "viewFullSSLReport": "📊 View Full SSL Labs Report →",
+    "viewFullSecurityHeadersReport": "📊 View Full Report at securityheaders.com →"
   },
   "import": {
     "title": "Data Import / Export",
@@ -212,5 +218,32 @@
     "exportDescription": "Your data will be downloaded as a JSON file. You can import it later to restore your progress.",
     "exportAfterNote": "After the download completes, all local data will be cleared.",
     "downloadResetButton": "Download & Reset"
+  },
+  "dkimModal": {
+    "title": "Manage DKIM Selectors",
+    "infoBanner": {
+      "description": "DKIM selectors vary by email provider. Add known selectors or extract them from an email.",
+      "domain": "Domain:"
+    },
+    "currentSelectors": "Current Selectors ({{count}})",
+    "addManually": "Add Selector Manually",
+    "selectorPlaceholder": "e.g., default, google, k1",
+    "addButton": "Add",
+    "removeSelector": "Remove {{selector}}",
+    "extractFromEmail": "Extract from Email Source",
+    "hideEmailSource": "Hide Email Source",
+    "extractHelp": "To get email source: Open an email → More options → Show original / View source",
+    "emailSourcePlaceholder": "Paste email headers or full email source here...",
+    "extractButton": "Extract Selectors",
+    "saveButton": "Save Selectors",
+    "errors": {
+      "selectorEmpty": "Selector cannot be empty",
+      "selectorTooLong": "Selector must be 63 characters or less",
+      "selectorInvalid": "Selector must start and end with a letter or number, and can only contain letters, numbers, and hyphens",
+      "selectorDuplicate": "Selector already added",
+      "emailSourceEmpty": "Please paste email headers or source",
+      "noSelectorsFound": "No DKIM selectors found in email source",
+      "noSelectors": "Please add at least one selector"
+    }
   }
 }

@@ -1,86 +1,64 @@
-import { app } from "@azure/functions";
-import tls from "tls";
+import { app } from '@azure/functions';
 
-function isValidHostname(host) {
-  if (!host) return false;
-  if (host.length > 253) return false;
-  if (/[\/\\\s:@]/.test(host)) return false;
+app.http('certificates', {
+  // ✅ Explicit route so SWA exposes it as /api/certificates
+  route: 'certificates',
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  handler: async (request) => {
+    const domain = request.query.get('domain');
 
-  const labels = host.split(".");
-  const labelRe = /^[a-z0-9-]+$/i;
-
-  return labels.every(
-    (l) =>
-      l.length > 0 &&
-      l.length < 64 &&
-      labelRe.test(l) &&
-      !l.startsWith("-") &&
-      !l.endsWith("-")
-  );
-}
-
-function fetchCertificate(host) {
-  return new Promise((resolve, reject) => {
-    const socket = tls.connect(
-      443,
-      host,
-      {
-        servername: host,
-        timeout: 5000
-      },
-      () => {
-        const cert = socket.getPeerCertificate(true);
-        socket.end();
-        resolve(cert);
-      }
-    );
-
-    socket.on("error", reject);
-    socket.on("timeout", () => {
-      socket.destroy();
-      reject(new Error("TLS connection timeout"));
-    });
-  });
-}
-
-app.http("certificates", {
-  methods: ["GET"],
-  authLevel: "anonymous",
-  route: "certificates",
-  handler: async (req) => {
-    const host = (req.query.get("host") || "").trim();
-
-    if (!isValidHostname(host)) {
+    if (!domain) {
       return {
         status: 400,
-        jsonBody: { error: "Invalid host" }
+        jsonBody: { error: "Missing required query param 'domain'" },
       };
     }
 
     try {
-      const cert = await fetchCertificate(host);
+      const url = `https://crt.sh/?q=${encodeURIComponent(domain)}&output=json`;
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'ra-api/1.0 (+Azure Static Web Apps)' },
+      });
+
+      if (!res.ok) {
+        return {
+          status: 502,
+          jsonBody: { error: `crt.sh returned ${res.status}`, domain },
+        };
+      }
+
+      const raw = await res.json();
+
+      // Deduplicate by cert id
+      const seen = new Set();
+      const certs = [];
+      for (const item of raw) {
+        const id = item?.id ?? item?.min_cert_id ?? item?.cert_id;
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+
+        certs.push({
+          id,
+          issuer_name: item?.issuer_name,
+          common_name: item?.common_name,
+          name_value: item?.name_value,
+          entry_timestamp: item?.entry_timestamp,
+          not_before: item?.not_before,
+          not_after: item?.not_after,
+        });
+      }
 
       return {
         status: 200,
-        jsonBody: {
-          host,
-          subject: cert.subject,
-          issuer: cert.issuer,
-          valid_from: cert.valid_from,
-          valid_to: cert.valid_to,
-          serialNumber: cert.serialNumber,
-          fingerprint: cert.fingerprint,
-          altNames: cert.subjectaltname || null
-        }
+        jsonBody: { domain, certs },
       };
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       return {
         status: 502,
-        jsonBody: {
-          error: "Unable to retrieve certificate",
-          details: err.message
-        }
+        jsonBody: { error: 'Certificates lookup failed', details: message, domain },
       };
     }
-  }
+  },
 });

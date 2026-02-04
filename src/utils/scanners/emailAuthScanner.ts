@@ -1,89 +1,122 @@
-import type { DomainScanner } from '../domainscan';
+// src/utils/scanners/emailAuthScanner.ts
+import i18next from 'i18next';
+import type { DomainScanner, ExecutedScannerResult, ScannerInterpretation } from '../../types/domainScan';
 import { fetchTXT } from '../domainChecks';
+import { getDkimSelectors } from '../dkimSelectorsService';
 
 function stripQuotes(v: string) {
-  return v.replace(/^"+|"+$/g, '').trim();
+  return v.replace(/^"+|"+$/g, '');
 }
 
-function firstTxtValue(txtRecords: string[] | undefined) {
-  if (!txtRecords || txtRecords.length === 0) return null;
-  // Some providers return chunks like ["v=spf1 ...", "..."] — we keep it simple:
-  // - join if multiple, otherwise use first
-  const joined = txtRecords.join('');
-  return stripQuotes(joined);
+function flattenTxt(txt: string[] | undefined): string {
+  return (txt ?? []).map(stripQuotes).join('');
+}
+
+function hasSpfRecord(txtRecords: string[]): boolean {
+  return txtRecords.some((t) => stripQuotes(t).toLowerCase().includes('v=spf1'));
+}
+
+function hasDmarcRecord(txtRecords: string[]): boolean {
+  return txtRecords.some((t) => stripQuotes(t).toLowerCase().includes('v=dmarc1'));
+}
+
+function hasDkimRecord(txtRecords: string[]): boolean {
+  return txtRecords.some((t) => stripQuotes(t).toLowerCase().includes('v=dkim1'));
+}
+
+async function safeFetchTxt(name: string): Promise<string[]> {
+  try {
+    const out = await fetchTXT(name);
+    return Array.isArray(out) ? out : [];
+  } catch {
+    return [];
+  }
 }
 
 export const emailAuthScanner: DomainScanner = {
   id: 'emailAuth',
   label: 'emailAuth.label',
   description: 'emailAuth.description',
-  dataSource: {
-    name: 'DNS',
-    url: 'https://www.iana.org/domains/reserved',
-  },
-  run: async (domain: string) => {
-    try {
-      // SPF is stored at the root domain as TXT containing v=spf1
-      const txtRoot = await fetchTXT(domain);
 
-      // DMARC is stored at _dmarc.<domain> as TXT containing v=DMARC1
-      const txtDmarc = await fetchTXT(`_dmarc.${domain}`);
+  async run(domain: string) {
+    const issues: string[] = [];
 
-      const spf = firstTxtValue((txtRoot ?? []).filter((r) => r.includes('v=spf1')));
-      const dmarc = firstTxtValue((txtDmarc ?? []).filter((r) => r.includes('v=DMARC1')));
+    // SPF (root TXT)
+    const rootTxt = await safeFetchTxt(domain);
+    const spfOk = hasSpfRecord(rootTxt);
+    if (!spfOk) issues.push(i18next.t('emailAuth.issues.noSPF', { ns: 'scanners' }));
 
-      const issues: string[] = [];
+    // DMARC (_dmarc TXT)
+    const dmarcTxt = await safeFetchTxt(`_dmarc.${domain}`);
+    const dmarcOk = hasDmarcRecord(dmarcTxt);
+    if (!dmarcOk) issues.push(i18next.t('emailAuth.issues.noDMARC', { ns: 'scanners' }));
 
-      if (!spf) issues.push('SPF record not found');
-      if (!dmarc) issues.push('DMARC record not found');
+    // DKIM (selector._domainkey TXT)
+    const savedSelectors = getDkimSelectors(domain);
+    const selectors =
+      savedSelectors.length > 0
+        ? savedSelectors
+        : ['default', 'selector1', 'selector2', 's1', 's2'];
 
-      // DKIM is more complex (selectors). If your app handles DKIM via a separate
-      // selector flow/modal, we avoid doing selector guessing here to preserve behavior.
+    let dkimFound = false;
 
-      return {
-        data: {
-          spf: !!spf,
-          dmarc: !!dmarc,
-          spfRecord: spf ?? undefined,
-          dmarcRecord: dmarc ?? undefined,
-        },
-        summary: `SPF:${spf ? 'yes' : 'no'}, DMARC:${dmarc ? 'yes' : 'no'}`,
-        issues,
-      };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Unknown error';
-      return {
-        summary: 'Email authentication lookup failed',
-        issues: [`Error: ${msg}`],
-      };
+    for (const sel of selectors) {
+      const name = `${sel}._domainkey.${domain}`;
+      const dkimTxt = await safeFetchTxt(name);
+      if (dkimTxt.length && hasDkimRecord(dkimTxt)) {
+        dkimFound = true;
+        break;
+      }
     }
+
+    if (!dkimFound) {
+      issues.push(i18next.t('emailAuth.issues.noDKIM', { ns: 'scanners' }));
+    }
+
+    const summaryParts = [
+      `SPF:${spfOk ? 'yes' : 'no'}`,
+      `DMARC:${dmarcOk ? 'yes' : 'no'}`,
+      `DKIM:${dkimFound ? 'yes' : 'no'}`,
+    ];
+
+    return {
+      summary: summaryParts.join(', '),
+      issues,
+      data: {
+        spf: flattenTxt(rootTxt),
+        dmarc: flattenTxt(dmarcTxt),
+        dkimSelectorsTried: selectors,
+        dkimFound,
+      },
+    };
   },
 };
 
-// ✅ Exported ONCE (this is the thing your build complained about)
-export const interpretEmailAuthResult = (result: any) => {
-  if (result?.status === 'error') {
+// Used by utils/scanners/index.ts to provide a consistent interpretation object
+export function interpretEmailAuthResult(scanner: ExecutedScannerResult, issueCount: number): ScannerInterpretation {
+  if (scanner.status === 'error') {
     return {
       severity: 'error',
-      message: result?.error || 'Email authentication check failed',
-      recommendation: 'Please try again later.',
+      message: scanner.error || i18next.t('common.errors.scannerFailed', { ns: 'scanners' }),
+      recommendation: i18next.t('common.errors.retryMessage', { ns: 'scanners' }),
     };
   }
-
-  const issueCount = Array.isArray(result?.issues) ? result.issues.length : 0;
 
   if (issueCount === 0) {
     return {
       severity: 'success',
-      message: 'Email authentication records look good.',
-      recommendation: 'No action needed.',
+      message: i18next.t('emailAuth.interpretation.ok', { ns: 'scanners', defaultValue: 'Email authentication looks good.' }),
+      recommendation: i18next.t('emailAuth.interpretation.none', { ns: 'scanners', defaultValue: 'No changes required.' }),
     };
   }
 
-  // Warnings by default (missing SPF/DMARC typically)
+  // If DKIM missing, keep severity at warning (common for orgs that don’t send mail from domain)
+  const issues = scanner.issues ?? [];
+  const hasCritical = issues.some((i) => i.includes('DMARC') || i.includes('SPF'));
+
   return {
-    severity: 'warning',
-    message: 'Email authentication records found with warnings.',
-    recommendation: 'Add or correct SPF/DMARC records to improve deliverability and spoofing protection.',
+    severity: hasCritical ? 'warning' : 'info',
+    message: i18next.t('emailAuth.interpretation.issues', { ns: 'scanners', count: issueCount }),
+    recommendation: i18next.t('emailAuth.interpretation.recommendation', { ns: 'scanners' }),
   };
-};
+}

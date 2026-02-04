@@ -1,0 +1,1 @@
+import "./functions/ping.js";

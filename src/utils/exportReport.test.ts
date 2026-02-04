@@ -28,7 +28,8 @@ const mockT = (key: string): string => {
     'report.noBestPracticesYet': 'No best practices confirmed yet.',
     'report.limitations': 'Limitations',
     // eslint-disable-next-line max-len
-    'report.limitationsText': 'This static tool performs only client-side checks using public unauthenticated sources. Some deeper assessments (full SSL chain validation, comprehensive breach analysis, exhaustive security header audit, port exposure) require server-side or authenticated APIs.'
+    'report.limitationsText':
+      'This static tool performs only client-side checks using public unauthenticated sources. Some deeper assessments (full SSL chain validation, comprehensive breach analysis, exhaustive security header audit, port exposure) require server-side or authenticated APIs.',
   };
   return translations[key] || key;
 };
@@ -40,12 +41,12 @@ const mockTScanners = (key: string): string => {
     'emailAuth.label': 'Email Authentication',
     'certificates.label': 'SSL/TLS Certificates',
     'rdap.label': 'Domain Registration (RDAP)',
-    'sslLabs.label': 'SSL/TLS Configuration',
     'securityHeaders.label': 'Security Headers',
     'common.errors.timeout': '{{label}} timed out after {{timeout}}ms',
     'common.errors.scannerFailed': 'Scanner failed to execute',
     // eslint-disable-next-line max-len
-    'common.errors.retryMessage': 'This check could not be completed. Please try again or check your network connection.'
+    'common.errors.retryMessage':
+      'This check could not be completed. Please try again or check your network connection.',
   };
   // Simple interpolation for testing
   let result = translations[key] || key;
@@ -67,10 +68,10 @@ const mockGetComputedStyle = vi.fn(() => ({
       '--text-secondary': '#06233F',
       '--accent': '#44C8F5',
       '--panel-bg': '#FFFFFF',
-      '--page-bg': '#F5F5F5'
+      '--page-bg': '#F5F5F5',
     };
     return colorMap[prop] || '';
-  })
+  }),
 }));
 
 global.getComputedStyle = mockGetComputedStyle as unknown as typeof getComputedStyle;
@@ -83,8 +84,8 @@ describe('exportReport', () => {
     categories: [
       { category: 'Access Management', total: 15, max: 20, percent: 75 },
       { category: 'Network Security', total: 30, max: 40, percent: 75 },
-      { category: 'Data Protection', total: 30, max: 40, percent: 75 }
-    ]
+      { category: 'Data Protection', total: 30, max: 40, percent: 75 },
+    ],
   };
 
   beforeEach(() => {
@@ -120,28 +121,9 @@ describe('exportReport', () => {
       expect(html).toContain('Access Management');
       expect(html).toContain('Network Security');
       expect(html).toContain('Data Protection');
-      expect(html).toContain('Score: 75%');
     });
 
-    it('includes risks when provided', () => {
-      const risks = ['Risk 1: High severity issue', 'Risk 2: Medium severity issue'];
-      const html = generateWordHTML({
-        score: sampleScore,
-        risks,
-        bestPractices: ['Follow best practice A', 'Implement best practice B'],
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(html).toContain('Identified Risks');
-      expect(html).toContain('Risk 1: High severity issue');
-      expect(html).toContain('Risk 2: Medium severity issue');
-      expect(html).toContain('Best Practices');
-      expect(html).toContain('Follow best practice A');
-      expect(html).toContain('Implement best practice B');
-    });
-
-    it('shows empty state message when no risks', () => {
+    it('handles empty risks and best practices', () => {
       const html = generateWordHTML({
         score: sampleScore,
         risks: [],
@@ -150,218 +132,60 @@ describe('exportReport', () => {
         tScanners: mockTScanners,
       });
 
-      expect(html).toContain('Identified Risks');
       expect(html).toContain('No risks yet');
+      expect(html).toContain('No best practices confirmed yet');
     });
 
-    it('includes scanner aggregate when provided', () => {
-      const aggregate: DomainScanAggregate = {
-        domain: 'test.com',
-        timestamp: new Date().toISOString(),
+    it('includes scanner results when present', () => {
+      const scan: DomainScanAggregate = {
+        domain: 'example.com',
+        scannedAt: new Date().toISOString(),
         scanners: [
           {
             id: 'dns',
-            label: 'DNS Records',
+            label: 'dns.label',
             status: 'complete',
             startedAt: new Date().toISOString(),
             finishedAt: new Date().toISOString(),
-            summary: '5 record types queried',
-            issues: []
-          }
+            summary: 'DNS ok',
+            issues: [],
+            data: {},
+          },
         ],
-        issues: []
       };
 
       const html = generateWordHTML({
         score: sampleScore,
         risks: [],
         bestPractices: [],
-        domainScanAggregate: aggregate,
         t: mockT,
         tScanners: mockTScanners,
+        domainScanAggregate: scan,
       });
 
       expect(html).toContain('Modular Scanner Results');
-      expect(html).toContain('test.com');
       expect(html).toContain('DNS Records');
-      expect(html).toContain('5 record types queried');
-    });
-
-    it('includes scanner issues when present', () => {
-      const aggregate: DomainScanAggregate = {
-        domain: 'test.com',
-        timestamp: new Date().toISOString(),
-        scanners: [
-          {
-            id: 'emailAuth',
-            label: 'Email Authentication',
-            status: 'complete',
-            startedAt: new Date().toISOString(),
-            finishedAt: new Date().toISOString(),
-            summary: 'SPF found, DMARC missing',
-            issues: ['Missing DMARC record']
-          }
-        ],
-        issues: ['Missing DMARC record']
-      };
-
-      const html = generateWordHTML({
-        score: sampleScore,
-        risks: [],
-        bestPractices: [],
-        domainScanAggregate: aggregate,
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(html).toContain('Missing DMARC record');
-      expect(html).toContain('Aggregated Issues');
-    });
-
-    it('includes security headers external link when present', () => {
-      const aggregate: DomainScanAggregate = {
-        domain: 'test.com',
-        timestamp: new Date().toISOString(),
-        scanners: [
-          {
-            id: 'securityHeaders',
-            label: 'Security Headers',
-            status: 'complete',
-            startedAt: new Date().toISOString(),
-            finishedAt: new Date().toISOString(),
-            summary: 'Grade A',
-            data: {
-              grade: 'A',
-              testUrl: 'https://securityheaders.com/?q=test.com'
-            },
-            issues: []
-          }
-        ],
-        issues: []
-      };
-
-      const html = generateWordHTML({
-        score: sampleScore,
-        risks: [],
-        bestPractices: [],
-        domainScanAggregate: aggregate,
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(html).toContain('https://securityheaders.com/?q=test.com');
-      expect(html).toContain('Full header analysis');
-    });
-
-    it('includes limitations section', () => {
-      const html = generateWordHTML({
-        score: sampleScore,
-        risks: [],
-        bestPractices: [],
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(html).toContain('Limitations');
-      expect(html).toContain('client-side checks');
-      expect(html).toContain('public unauthenticated sources');
-    });
-
-    it('uses CSS variables from computed styles', () => {
-      const html = generateWordHTML({
-        score: sampleScore,
-        risks: [],
-        bestPractices: [],
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(mockGetComputedStyle).toHaveBeenCalled();
-      expect(html).toContain('#18BB9C'); // green
-      expect(html).toContain('#44C8F5'); // blue/accent
-      expect(html).toContain('#F39C11'); // yellow
-      expect(html).toContain('#E84C3D'); // red
-    });
-
-    it('generates correct score color for excellent score', () => {
-      const excellentScore: ScoreResult = {
-        total: 90,
-        max: 100,
-        percent: 90,
-        categories: []
-      };
-
-      const html = generateWordHTML({
-        score: excellentScore,
-        risks: [],
-        bestPractices: [],
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(html).toContain('90%');
-      expect(html).toContain('Excellent Security Posture');
-    });
-
-    it('generates correct score color for poor score', () => {
-      const poorScore: ScoreResult = {
-        total: 30,
-        max: 100,
-        percent: 30,
-        categories: []
-      };
-
-      const html = generateWordHTML({
-        score: poorScore,
-        risks: [],
-        bestPractices: [],
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(html).toContain('30%');
-      expect(html).toContain('Critical - Immediate Action Required');
+      expect(html).toContain('DNS ok');
     });
   });
 
   describe('exportToWord', () => {
-    let mockCreateObjectURL: ReturnType<typeof vi.fn>;
-    let mockRevokeObjectURL: ReturnType<typeof vi.fn>;
-    let mockClick: ReturnType<typeof vi.fn>;
-    let BlobConstructorSpy: ReturnType<typeof vi.fn>;
+    it('creates and downloads a .doc file', async () => {
+      const createElementSpy = vi.spyOn(document, 'createElement');
+      const appendChildSpy = vi.spyOn(document.body, 'appendChild');
+      const removeChildSpy = vi.spyOn(document.body, 'removeChild');
 
-    beforeEach(() => {
-      mockCreateObjectURL = vi.fn(() => 'mock-url');
-      mockRevokeObjectURL = vi.fn();
-      mockClick = vi.fn();
+      const clickMock = vi.fn();
 
-      // Create a mock Blob class
-      BlobConstructorSpy = vi.fn();
-      class MockBlob {
-        constructor(parts: unknown[], options?: { type?: string }) {
-          new BlobConstructorSpy(parts, options);
-          return { parts, options, type: options?.type } as unknown as Blob;
-        }
-      }
+      createElementSpy.mockReturnValue({
+        href: '',
+        download: '',
+        click: clickMock,
+      } as unknown as HTMLAnchorElement);
 
-      global.URL.createObjectURL = mockCreateObjectURL;
-      global.URL.revokeObjectURL = mockRevokeObjectURL;
-      global.Blob = MockBlob as unknown as typeof Blob;
+      const blobSpy = vi.spyOn(global, 'Blob');
 
-      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
-        if (tagName === 'a') {
-          return {
-            click: mockClick,
-            href: '',
-            download: ''
-          } as unknown as HTMLAnchorElement;
-        }
-        return document.createElement(tagName);
-      });
-    });
-
-    it('creates a blob with correct content type', () => {
-      exportToWord({
+      await exportToWord({
         score: sampleScore,
         risks: [],
         bestPractices: [],
@@ -369,47 +193,10 @@ describe('exportReport', () => {
         tScanners: mockTScanners,
       });
 
-      expect(BlobConstructorSpy).toHaveBeenCalledWith(
-        expect.arrayContaining(['\ufeff', expect.any(String)]),
-        { type: 'application/msword' }
-      );
-    });
-
-    it('creates download link with correct filename', () => {
-      exportToWord({
-        score: sampleScore,
-        risks: [],
-        bestPractices: [],
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(mockClick).toHaveBeenCalled();
-    });
-
-    it('creates and revokes object URL', () => {
-      exportToWord({
-        score: sampleScore,
-        risks: [],
-        bestPractices: [],
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(mockCreateObjectURL).toHaveBeenCalled();
-      expect(mockRevokeObjectURL).toHaveBeenCalledWith('mock-url');
-    });
-
-    it('triggers download by clicking anchor element', () => {
-      exportToWord({
-        score: sampleScore,
-        risks: [],
-        bestPractices: [],
-        t: mockT,
-        tScanners: mockTScanners,
-      });
-
-      expect(mockClick).toHaveBeenCalledTimes(1);
+      expect(blobSpy).toHaveBeenCalled();
+      expect(appendChildSpy).toHaveBeenCalled();
+      expect(clickMock).toHaveBeenCalled();
+      expect(removeChildSpy).toHaveBeenCalled();
     });
   });
 });

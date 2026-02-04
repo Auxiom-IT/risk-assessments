@@ -1,123 +1,70 @@
-// Client-side domain assessment utilities relying on public APIs.
-// NOTE: Some checks (full SSL chain, security headers via direct fetch) are limited by CORS in a static site.
+// Utility functions for DNS lookups used by multiple scanners.
+//
+// NOTE: We intentionally do NOT use public DNS-over-HTTPS resolvers (e.g. dns.google).
+// In the browser you can't do true DNS queries, so we route DNS lookups through our SWA
+// Azure Function at /api/dns, which uses the platform's configured DNS resolver.
 
-export interface DNSRecordResult {
-  type: string;
+export type DnsRecordType = 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT';
+
+export type DNSRecordResult = {
+  type: DnsRecordType;
   data: string[];
-}
+};
 
-export interface DomainScanResult {
-  domain: string;
-  timestamp: string;
-  dns: DNSRecordResult[];
-  spf?: string;
-  dmarc?: string;
-  dkimSelectorsFound: string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  certificates?: any[]; // Raw crt.sh JSON rows
-  issues: string[]; // Derived issue strings
-}
+type GoogleDnsLikeResponse = {
+  Status?: number;
+  Answer?: Array<{ data?: string }>;
+};
 
-export const fetchDNS = async (domain: string, rrtype: string): Promise<DNSRecordResult | null> => {
+// Use the SWA API function (/api/dns) for DNS resolution.
+async function fetchDNS(domain: string, type: DnsRecordType): Promise<DNSRecordResult | null> {
   try {
-    const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${rrtype}`);
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (!json.Answer) return { type: rrtype, data: [] };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = json.Answer.map((a: any) => a.data).filter((d: string) => !!d);
-    return { type: rrtype, data };
-  } catch {
-    return null;
-  }
-};
+    const url = `/api/dns?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
+    const response = await fetch(url, {
+      // Avoid cached stale results between scans
+      cache: 'no-store',
+    });
 
-export const fetchTXT = async (domain: string): Promise<string[]> => {
-  const rec = await fetchDNS(domain, 'TXT');
-  return rec?.data || [];
-};
+    if (!response.ok) return null;
 
-export const extractSPF = (txtRecords: string[]): string | undefined => {
-  return txtRecords.find((r) => r.toLowerCase().startsWith('v=spf1'));
-};
+    const json = (await response.json()) as GoogleDnsLikeResponse;
 
-export const fetchDMARC = async (domain: string): Promise<string | undefined> => {
-  const name = `_dmarc.${domain}`;
-  const txt = await fetchTXT(name);
-  return txt.find((t) => t.toLowerCase().includes('v=dmarc'));
-};
-
-export const checkDKIM = async (domain: string, customSelectors?: string[]): Promise<string[]> => {
-  // If custom selectors are provided, use only those
-  // Otherwise, fall back to common DKIM selectors used by major email providers
-  const defaultSelectors = [
-    // Generic/Common
-    'default', 'dkim', 'mail', 'email', 'smtp',
-
-    // Google Workspace / Gmail
-    'google', 'googlemail',
-
-    // Microsoft 365 / Office 365
-    'selector1', 'selector2',
-
-    // Common patterns
-    'k1', 'k2', 'k3', 's1', 's2', 's3',
-    'key1', 'key2', 'key3',
-    'dkim1', 'dkim2', 'dkim3',
-
-    // Marketing platforms
-    'mailgun', 'sendgrid', 'mandrill', 'sparkpost',
-    'mta', 'mta1', 'mta2',
-    'pm', 'pm1', 'pm2', // Postmark
-    'em', 'em1', 'em2', // Email service providers
-
-    // Other common patterns
-    'mx', 'mx1', 'mx2',
-    'smtpapi', 'api',
-    'marketing', 'transactional',
-  ];
-
-  const selectors = customSelectors && customSelectors.length > 0 ? customSelectors : defaultSelectors;
-
-  const found: string[] = [];
-
-  // Check all selectors in parallel for better performance
-  const checks = selectors.map(async (sel) => {
-    const name = `${sel}._domainkey.${domain}`;
-    const txt = await fetchTXT(name);
-    // Valid DKIM records contain either v=DKIM1 or p= with actual key data (not just "p=" or "p= ")
-    if (txt.some((t) => {
-      if (t.includes('v=DKIM1')) return true;
-      // Check for p= with actual content (not empty or whitespace only)
-      const pMatch = t.match(/p=([^;\s]+)/);
-      return pMatch && pMatch[1] && pMatch[1].length > 0;
-    })) {
-      return sel;
+    // If no Answer field, treat as "no records"
+    if (!json.Answer || !Array.isArray(json.Answer)) {
+      return { type, data: [] };
     }
-    return null;
-  });
 
-  const results = await Promise.all(checks);
-  found.push(...results.filter((r): r is string => r !== null));
+    const records = json.Answer
+      .map((a) => (a?.data ?? '').toString())
+      .filter((v) => v.length > 0);
 
-  return found;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const fetchCertificates = async (domain: string): Promise<any[] | undefined> => {
-  try {
-    const res = await fetch(`https://crt.sh/?q=${encodeURIComponent(domain)}&output=json`);
-    if (!res.ok) return undefined;
-    return await res.json();
+    return { type, data: records };
   } catch {
-    return undefined;
+    return null;
   }
-};
+}
 
-export const deriveIssues = (scan: Partial<DomainScanResult>): string[] => {
-  const issues: string[] = [];
-  if (scan.spf === undefined) issues.push('Missing SPF record');
-  if (scan.dmarc === undefined) issues.push('Missing DMARC record');
-  if ((scan.dkimSelectorsFound || []).length === 0) issues.push('No DKIM selectors detected (heuristic)');
-  return issues;
-};
+export async function fetchTXT(domain: string): Promise<string[]> {
+  const result = await fetchDNS(domain, 'TXT');
+  return result?.data ?? [];
+}
+
+export async function fetchMX(domain: string): Promise<string[]> {
+  const result = await fetchDNS(domain, 'MX');
+  return result?.data ?? [];
+}
+
+export async function fetchA(domain: string): Promise<string[]> {
+  const result = await fetchDNS(domain, 'A');
+  return result?.data ?? [];
+}
+
+export async function fetchAAAA(domain: string): Promise<string[]> {
+  const result = await fetchDNS(domain, 'AAAA');
+  return result?.data ?? [];
+}
+
+export async function fetchCNAME(domain: string): Promise<string[]> {
+  const result = await fetchDNS(domain, 'CNAME');
+  return result?.data ?? [];
+}

@@ -5,7 +5,8 @@ import { SCANNERS, interpretScannerResult } from '../../utils/scanners';
 import { TrackedButton } from '../TrackedButton';
 import { trackFormSubmit } from '../../utils/analytics';
 import { validateDomain } from '../../utils/domainValidation';
-import { DkimSelectorsModal } from '../DkimSelectorsModal';
+import DkimSelectorsModal from '../DkimSelectorsModal';
+import { getDkimSelectors, saveDkimSelectors } from '../../utils/dkimSelectorsService';
 import styles from './DomainScanner.module.css';
 
 const DomainScanner: React.FC = () => {
@@ -18,7 +19,9 @@ const DomainScanner: React.FC = () => {
   const [domain, setDomain] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [showDkimModal, setShowDkimModal] = useState(false);
+  const [currentDomain, setCurrentDomain] = useState<string>('');
 
   const handleScan = async () => {
     const trimmedDomain = domain.trim();
@@ -40,6 +43,7 @@ const DomainScanner: React.FC = () => {
     trackFormSubmit('domain_scanner', { domain: trimmedDomain });
 
     try {
+      setCurrentDomain(trimmedDomain);
       await runScanners(trimmedDomain);
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -53,6 +57,38 @@ const DomainScanner: React.FC = () => {
   const handleDomainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDomain(e.target.value);
     if (error) setError(null);
+  };
+
+  const handleOpenDkimModal = () => {
+    const d = (domainScanAggregate?.domain ?? domain.trim()).trim();
+    if (!d) return;
+    setCurrentDomain(d);
+    setShowDkimModal(true);
+  };
+
+  const handleSaveDkimSelectors = async (selectors: string[]) => {
+    if (!currentDomain) return;
+
+    const saved = saveDkimSelectors(currentDomain, selectors);
+    if (!saved) {
+      // best-effort: if localStorage is blocked/full, show an error
+      setError(t('domainScanner.errors.scanFailed'));
+      return;
+    }
+
+    setShowDkimModal(false);
+
+    // Re-run scanners so results reflect updated selectors
+    setIsScanning(true);
+    try {
+      await runScanners(currentDomain);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Error re-running scanners after saving DKIM selectors:', err);
+      setError(t('domainScanner.errors.scanFailed'));
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const renderScannerStatus = (status: string) => {
@@ -71,15 +107,35 @@ const DomainScanner: React.FC = () => {
   const renderSeverityBadge = (severity: string) => {
     switch (severity) {
       case 'critical':
-        return <span className={`${styles.severity} ${styles.critical}`}>{t('domainScanner.severityCritical')}</span>;
+        return (
+          <span className={`${styles.severity} ${styles.critical}`}>
+            {t('domainScanner.severityCritical')}
+          </span>
+        );
       case 'error':
-        return <span className={`${styles.severity} ${styles.error}`}>{t('domainScanner.severityError')}</span>;
+        return (
+          <span className={`${styles.severity} ${styles.error}`}>
+            {t('domainScanner.severityError')}
+          </span>
+        );
       case 'warning':
-        return <span className={`${styles.severity} ${styles.warning}`}>{t('domainScanner.severityWarning')}</span>;
+        return (
+          <span className={`${styles.severity} ${styles.warning}`}>
+            {t('domainScanner.severityWarning')}
+          </span>
+        );
       case 'info':
-        return <span className={`${styles.severity} ${styles.info}`}>{t('domainScanner.severityInfo')}</span>;
+        return (
+          <span className={`${styles.severity} ${styles.info}`}>
+            {t('domainScanner.severityInfo')}
+          </span>
+        );
       case 'good':
-        return <span className={`${styles.severity} ${styles.good}`}>{t('domainScanner.severityGood')}</span>;
+        return (
+          <span className={`${styles.severity} ${styles.good}`}>
+            {t('domainScanner.severityGood')}
+          </span>
+        );
       default:
         return null;
     }
@@ -131,7 +187,7 @@ const DomainScanner: React.FC = () => {
 
         <div className={styles.inputContainer}>
           <input
-            type="text"
+            type='text'
             value={domain}
             onChange={handleDomainChange}
             placeholder={t('domainScanner.placeholder')}
@@ -139,7 +195,7 @@ const DomainScanner: React.FC = () => {
             className={styles.input}
           />
           <TrackedButton
-            trackingEvent="domain_scan_button"
+            trackingEvent='domain_scan_button'
             trackingData={{ domain }}
             onClick={handleScan}
             disabled={isScanning || !domain.trim()}
@@ -212,8 +268,8 @@ const DomainScanner: React.FC = () => {
 
             <div className={styles.extraActions}>
               <TrackedButton
-                trackingEvent="dkim_selectors_manage"
-                onClick={() => setShowDkimModal(true)}
+                trackingEvent='dkim_selectors_manage'
+                onClick={handleOpenDkimModal}
                 className={styles.secondaryButton}
               >
                 {t('domainScanner.dkimPrompt.manageButton')}
@@ -223,7 +279,15 @@ const DomainScanner: React.FC = () => {
         )}
       </div>
 
-      {showDkimModal && <DkimSelectorsModal onClose={() => setShowDkimModal(false)} />}
+      {showDkimModal && currentDomain && (
+        <DkimSelectorsModal
+          isOpen={showDkimModal}
+          onClose={() => setShowDkimModal(false)}
+          onSave={handleSaveDkimSelectors}
+          domain={currentDomain}
+          existingSelectors={getDkimSelectors(currentDomain)}
+        />
+      )}
     </div>
   );
 };

@@ -20,8 +20,8 @@ const DomainScanner = () => {
   const [showDkimModal, setShowDkimModal] = useState(false);
   const [currentDomain, setCurrentDomain] = useState<string>('');
 
-  // ✅ Defensive: domainScanAggregate can exist while issues is temporarily undefined
-  const aggregateIssues: string[] = domainScanAggregate?.issues ?? [];
+  // ✅ Defensive: some stored/imported aggregates may omit `issues`
+  const aggregateIssues = domainScanAggregate?.issues ?? [];
 
   const onScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,35 +168,35 @@ const DomainScanner = () => {
                     <div className='interpretation-recommendation'>{interpretation.recommendation}</div>
                     {s.id === 'sslLabs' && prog?.data &&
                       (prog.data as { testUrl?: string }).testUrl
-                        ? (
-                          <div className='external-link'>
-                            <a
-                              href={(prog.data as { testUrl?: string }).testUrl!}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='btn-link'
-                            >
-                              {t('domainScanner.viewFullSSLReport')}
-                            </a>
-                          </div>
-                          )
-                        : null
+                      ? (
+                        <div className='external-link'>
+                          <a
+                            href={(prog.data as { testUrl?: string }).testUrl!}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='btn-link'
+                          >
+                            {t('domainScanner.viewFullSSLReport')}
+                          </a>
+                        </div>
+                      )
+                      : null
                     }
                     {s.id === 'securityHeaders' && prog?.data &&
                       (prog.data as { testUrl?: string }).testUrl
-                        ? (
-                          <div className='external-link'>
-                            <a
-                              href={(prog.data as { testUrl?: string }).testUrl!}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='btn-link'
-                            >
-                              {t('domainScanner.viewFullSecurityHeadersReport')}
-                            </a>
-                          </div>
-                          )
-                        : null
+                      ? (
+                        <div className='external-link'>
+                          <a
+                            href={(prog.data as { testUrl?: string }).testUrl!}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='btn-link'
+                          >
+                            {t('domainScanner.viewFullSecurityHeadersReport')}
+                          </a>
+                        </div>
+                      )
+                      : null
                     }
                   </div>
                 )}
@@ -215,44 +215,44 @@ const DomainScanner = () => {
 
                 {/* DKIM Selector Management Prompt */}
                 {s.id === 'emailAuth' && prog?.status === 'complete' &&
-                 prog.issues && prog.issues.some((issue: string) =>
-                   issue === t('emailAuth.issues.noDKIM', { ns: 'scanners' })
-                 ) && currentDomain && (
-                  <div className='scanner-dkim-prompt'>
-                    <svg className='info-icon' viewBox='0 0 24 24' fill='currentColor'>
-                      <path
-                        d={
-                          // eslint-disable-next-line max-len
-                          'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'
-                        }
-                      />
-                    </svg>
-                    <div className='prompt-content'>
-                      <span>
-                        {t('domainScanner.dkimPrompt.description')}
-                      </span>
-                      <button type='button' onClick={handleOpenDkimModal} className='manage-selectors-btn'>
-                        <svg className='btn-icon' viewBox='0 0 24 24' fill='currentColor'>
-                          <path
-                            d={
-                              'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23'
-                              + '-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62'
-                              + '-.94L14.4 2.81c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c'
-                              + '-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08'
-                              + '.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23'
-                              + '.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c'
-                              + '.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62'
-                              + '-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z'
-                              + 'M12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6'
-                              + '-3.6 3.6z'
-                            }
-                          />
-                        </svg>
-                        {t('domainScanner.dkimPrompt.manageButton')}
-                      </button>
+                  prog.issues && prog.issues.some((issue: string) =>
+                    issue === t('emailAuth.issues.noDKIM', { ns: 'scanners' })
+                  ) && currentDomain && (
+                    <div className='scanner-dkim-prompt'>
+                      <svg className='info-icon' viewBox='0 0 24 24' fill='currentColor'>
+                        <path
+                          d={
+                            // eslint-disable-next-line max-len
+                            'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'
+                          }
+                        />
+                      </svg>
+                      <div className='prompt-content'>
+                        <span>
+                          {t('domainScanner.dkimPrompt.description')}
+                        </span>
+                        <button type='button' onClick={handleOpenDkimModal} className='manage-selectors-btn'>
+                          <svg className='btn-icon' viewBox='0 0 24 24' fill='currentColor'>
+                            <path
+                              d={
+                                'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23'
+                                + '-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62'
+                                + '-.94L14.4 2.81c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c'
+                                + '-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08'
+                                + '.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23'
+                                + '.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c'
+                                + '.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62'
+                                + '-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z'
+                                + 'M12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6'
+                                + '-3.6 3.6z'
+                              }
+                            />
+                          </svg>
+                          {t('domainScanner.dkimPrompt.manageButton')}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </li>
             );
           })}
@@ -268,7 +268,7 @@ const DomainScanner = () => {
               </p>
             </div>
 
-            {/* ✅ use safe aggregateIssues instead of domainScanAggregate.issues */}
+            {/* ✅ Use defensive aggregateIssues so we never crash */}
             <h5>{t('domainScanner.allIssues')} ({aggregateIssues.length})</h5>
             {aggregateIssues.length ? (
               <ul className='aggregate-issues'>

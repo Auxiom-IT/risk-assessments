@@ -13,14 +13,11 @@ app.http("ssllabsAnalyze", {
     const url = new URL("https://api.ssllabs.com/api/v3/analyze");
     url.searchParams.set("host", host);
 
-    // ✅ Prevent starting new scans constantly
-    url.searchParams.set("startNew", "off");
-
-    // ✅ Prefer cached results
+    // ✅ Use cache first
     url.searchParams.set("fromCache", "on");
 
-    // ✅ Don't request full details until READY
-    url.searchParams.set("all", "off");
+    // ✅ Prevent constant new scans
+    url.searchParams.set("startNew", "off");
 
     const resp = await fetch(url.toString(), {
       headers: {
@@ -30,17 +27,6 @@ app.http("ssllabsAnalyze", {
     });
 
     const data = await resp.json();
-
-    // If SSL Labs is overloaded, return clean message
-    if (data.message?.includes("full capacity")) {
-      return {
-        status: 503,
-        jsonBody: {
-          error: "SSL Labs is at capacity. Try again later.",
-          upstream: data.message
-        }
-      };
-    }
 
     return {
       status: resp.status,

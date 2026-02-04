@@ -1,74 +1,126 @@
 // api/src/functions/securityHeaders.js
-// Server-side fetch to securityheaders.com to avoid client-side CORS proxy issues.
-
 import { app } from '@azure/functions';
 
-function parseGrade(html) {
-  // Try a couple likely patterns; keep robust/fallback
-  const gradeMatch =
-    html.match(/class="reportCardGrade[^"]*">\s*([A-F][+-]?)\s*</i) ||
-    html.match(/Report\s*Card\s*Grade[^A-F]*([A-F][+-]?)/i);
+function parseSecurityHeadersHtml(html) {
+  // Try multiple patterns because securityheaders.com markup has changed over time
+  const gradePatterns = [
+    // Old-ish: <div class="score"><div class="score_yellow"><span>B</span>
+    /<div\s+class="score">\s*<div\s+class="score_[^"]*">\s*<span>\s*([A-F][+-]?)\s*<\/span>/i,
 
-  const grade = gradeMatch ? gradeMatch[1].trim() : null;
+    // Variant: class="score_*">A+</span> (less strict)
+    /class="score_[^"]*".*?<span>\s*([A-F][+-]?)\s*<\/span>/is,
 
-  // Score is optional
-  const scoreMatch = html.match(/Score[^0-9]*([0-9]{1,3})\s*\/\s*100/i);
-  const score = scoreMatch ? Number(scoreMatch[1]) : null;
+    // Textual fallback: "Grade: A"
+    /Grade:\s*([A-F][+-]?)/i,
 
-  return { grade, score };
-}
+    // Another common variant: >A</ (single letter inside a score element)
+    /<span[^>]*>\s*([A-F][+-]?)\s*<\/span>/i
+  ];
 
-async function securityHeaders(request, context) {
-  try {
-    const url = new URL(request.url);
-    const host = (url.searchParams.get('host') || '').trim().toLowerCase();
-
-    if (!host) {
-      return { status: 400, jsonBody: { error: 'Missing host parameter' } };
+  let grade = null;
+  for (const re of gradePatterns) {
+    const m = html.match(re);
+    if (m?.[1]) {
+      grade = m[1].trim();
+      break;
     }
-
-    const target = `https://securityheaders.com/?q=${encodeURIComponent(host)}&hide=on&followRedirects=on`;
-
-    const res = await fetch(target, {
-      headers: {
-        'user-agent': 'ra.auxiom.com (Azure Functions)',
-        accept: 'text/html,*/*',
-      },
-    });
-
-    if (!res.ok) {
-      return {
-        status: res.status,
-        jsonBody: { error: `SecurityHeaders request failed (${res.status})` },
-      };
-    }
-
-    const html = await res.text();
-    const { grade, score } = parseGrade(html);
-
-    return {
-      status: 200,
-      jsonBody: {
-        host,
-        grade,
-        score,
-        reportUrl: target,
-      },
-      headers: {
-        'content-type': 'application/json',
-        'cache-control': 'public, max-age=300',
-      },
-    };
-  } catch (err) {
-    context.error(err);
-    return { status: 500, jsonBody: { error: 'Internal error' } };
   }
+
+  // Score: "Score: 85"
+  const scoreMatch = html.match(/Score:\s*(\d{1,3})/i);
+  const score = scoreMatch ? Number.parseInt(scoreMatch[1], 10) : null;
+
+  // Missing headers section
+  const missingHeaders = [];
+  const missingSection = html.match(
+    /<div class="reportTitle">Missing Headers<\/div>[\s\S]*?<div class="reportBody">([\s\S]*?)<\/div>\s*<\/div>/i
+  );
+  if (missingSection?.[1]) {
+    const headerMatches = missingSection[1].matchAll(/<th\s+class="tableLabel table_red">([^<]+)<\/th>/gi);
+    for (const m of headerMatches) {
+      const headerName = (m[1] || '').trim();
+      if (headerName && !missingHeaders.includes(headerName)) missingHeaders.push(headerName);
+    }
+  }
+
+  // Warnings section
+  const warnings = [];
+  const warningsSection = html.match(
+    /<div class="reportTitle">Warnings<\/div>[\s\S]*?<div class="reportBody">([\s\S]*?)<\/div>\s*<\/div>/i
+  );
+  if (warningsSection?.[1]) {
+    const warningMatches = warningsSection[1].matchAll(/<th\s+class="tableLabel table_orange">([^<]+)<\/th>/gi);
+    for (const m of warningMatches) {
+      const txt = (m[1] || '').trim();
+      if (txt) warnings.push(txt);
+    }
+  }
+
+  return { grade, score, missingHeaders, warnings };
 }
 
 app.http('securityHeaders', {
   methods: ['GET'],
   authLevel: 'anonymous',
-  handler: securityHeaders,
-});
+  route: 'securityheaders',
+  handler: async (request) => {
+    try {
+      const url = new URL(request.url);
+      const host = (url.searchParams.get('host') || url.searchParams.get('domain') || '').trim();
 
-export default securityHeaders;
+      if (!host) {
+        return {
+          status: 400,
+          jsonBody: { error: "Missing required query parameter: 'host'" }
+        };
+      }
+
+      const testUrl = `https://securityheaders.com/?q=${encodeURIComponent(host)}&hide=on&followRedirects=on`;
+
+      // securityheaders.com can be picky; set a UA and accept HTML
+      const resp = await fetch(testUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (compatible; AuxiomRiskAssessments/1.0; +https://ra.auxiom.com)',
+          'Accept': 'text/html,application/xhtml+xml'
+        }
+      });
+
+      if (!resp.ok) {
+        return {
+          status: resp.status,
+          jsonBody: {
+            error: `securityheaders.com returned ${resp.status}`,
+            testUrl
+          }
+        };
+      }
+
+      const html = await resp.text();
+      const { grade, score, missingHeaders, warnings } = parseSecurityHeadersHtml(html);
+
+      // IMPORTANT:
+      // If parsing fails, we still return 200 with grade: null so the UI can render a friendly message.
+      return {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store'
+        },
+        jsonBody: {
+          ok: true,
+          testUrl,
+          grade,
+          score,
+          missingHeaders,
+          warnings
+        }
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      return {
+        status: 500,
+        jsonBody: { error: msg }
+      };
+    }
+  }
+});

@@ -12,7 +12,7 @@ function apiUrl(path: string, params?: Record<string, string>) {
   return url.toString();
 }
 
-async function fetchDNS(name: string, type: DNSRecordType): Promise<string[]> {
+export async function fetchDNS(name: string, type: DNSRecordType): Promise<string[]> {
   // IMPORTANT:
   // Our current SWA Function route is `dns/resolve` => `/api/dns/resolve`
   const url = apiUrl('/api/dns/resolve', { name, type });
@@ -28,7 +28,7 @@ async function fetchDNS(name: string, type: DNSRecordType): Promise<string[]> {
 
   const json: any = await res.json();
 
-  // Support multiple response shapes (we've had a few iterations of this API):
+  // Support multiple response shapes:
   // 1) { ok: true, answers: string[] }
   // 2) { type: "A", data: [{ value: "1.2.3.4", ...}, ...] }
   // 3) { Answer: [{ data: "1.2.3.4", ...}, ...] } (Google-style)
@@ -38,7 +38,6 @@ async function fetchDNS(name: string, type: DNSRecordType): Promise<string[]> {
     Array.isArray(json?.data) ? json.data :
     [];
 
-  // Normalize to string array
   return (answers as any[])
     .map((a) => {
       if (typeof a === 'string') return a;
@@ -87,9 +86,6 @@ export async function fetchCertificates(host: string): Promise<unknown> {
 
   const json: any = await res.json();
 
-  // Support both:
-  // - { ok: true, certificates: [...] }
-  // - { host, certificates: [...], timestamp }
   if (Array.isArray(json?.certificates)) return json.certificates;
 
   // If the API returns something unexpected, still pass it through for debugging.

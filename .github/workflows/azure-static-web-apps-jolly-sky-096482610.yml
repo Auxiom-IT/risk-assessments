@@ -7,6 +7,10 @@ on:
     types: [opened, synchronize, reopened, closed]
     branches: [main]
 
+concurrency:
+  group: swa-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
@@ -25,6 +29,8 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_JOLLY_SKY_096482610 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
+
+          production_branch: main
 
           app_location: "/"
           api_location: "api"

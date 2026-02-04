@@ -1,5 +1,9 @@
 {
   "name": "ra-api",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@azure/functions": "^4.0.0"
+  }
 }

@@ -20,8 +20,8 @@ const DomainScanner = () => {
   const [showDkimModal, setShowDkimModal] = useState(false);
   const [currentDomain, setCurrentDomain] = useState<string>('');
 
-  // ✅ Defensive: some scan aggregates may not include issues
-  const aggregateIssues = domainScanAggregate?.issues ?? [];
+  // ✅ Defensive: domainScanAggregate can exist while issues is temporarily undefined
+  const aggregateIssues: string[] = domainScanAggregate?.issues ?? [];
 
   const onScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,6 +267,8 @@ const DomainScanner = () => {
                 {' '}{new Date(domainScanAggregate.timestamp).toLocaleString()}
               </p>
             </div>
+
+            {/* ✅ use safe aggregateIssues instead of domainScanAggregate.issues */}
             <h5>{t('domainScanner.allIssues')} ({aggregateIssues.length})</h5>
             {aggregateIssues.length ? (
               <ul className='aggregate-issues'>

@@ -14,14 +14,13 @@ const DomainScanner = () => {
   const { t } = useTranslation('common');
   const { t: tScanners } = useTranslation('scanners');
   const { runScanners, domainScanAggregate, scannerProgress } = useAppState();
+  const aggregateIssues = domainScanAggregate?.issues ?? [];
+
   const [input, setInput] = useState(domainScanAggregate?.domain ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDkimModal, setShowDkimModal] = useState(false);
   const [currentDomain, setCurrentDomain] = useState<string>('');
-
-  // ✅ Defensive: some aggregates may omit `issues`
-  const aggregateIssues = domainScanAggregate?.issues ?? [];
 
   const onScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,203 +40,156 @@ const DomainScanner = () => {
 
     setLoading(true);
     setCurrentDomain(validation.normalizedDomain!);
-    trackFormSubmit('domain_scan', { domain: validation.normalizedDomain });
+
+    // Track scan event
+    trackFormSubmit('domain_scanner', { domain: validation.normalizedDomain });
 
     try {
-      // Use normalized domain for scanning
       await runScanners(validation.normalizedDomain!);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : t('domainScanner.errors.scanFailed');
-      setError(errorMessage);
+      // eslint-disable-next-line no-console
+      console.error('Error running scanners:', err);
+      setError(t('domainScanner.errors.scanFailed'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenDkimModal = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShowDkimModal(true);
+  const renderStatusBadge = (status: string) => {
+    if (status === 'complete') return <span className='status complete'>COMPLETE</span>;
+    if (status === 'running') return <span className='status running'>RUNNING</span>;
+    if (status === 'error') return <span className='status error'>ERROR</span>;
+    return <span className='status pending'>PENDING</span>;
+  };
+
+  const renderSeverityBadge = (severity: string) => {
+    if (severity === 'critical') return <span className='severity critical'>Critical</span>;
+    if (severity === 'warning') return <span className='severity warning'>Warning</span>;
+    if (severity === 'info') return <span className='severity info'>Info</span>;
+    return <span className='severity good'>Good</span>;
   };
 
   const handleSaveDkimSelectors = async (selectors: string[]) => {
-    if (currentDomain) {
-      const saved = saveDkimSelectors(currentDomain, selectors);
-      if (!saved) {
-        // Show an error if saving selectors failed (e.g., localStorage unavailable/full)
-        setError(t('domainScanner.errors.scanFailed'));
-        return;
-      }
-      setShowDkimModal(false);
-      // Trigger a rescan to check with new selectors
-      setLoading(true);
-      try {
-        await runScanners(currentDomain);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : t('domainScanner.errors.scanFailed');
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    }
+    if (!currentDomain) return;
+    await saveDkimSelectors(currentDomain, selectors);
+    setShowDkimModal(false);
   };
 
   return (
-    <div className='panel'>
-      <h2>{t('domainScanner.title')}</h2>
-      <p>{t('domainScanner.description')}</p>
+    <div className='domain-scanner'>
+      <div className='scanner-container'>
+        <h2>{t('domainScanner.title')}</h2>
+        <p>{t('domainScanner.description')}</p>
 
-      <form onSubmit={onScan} className='domain-form'>
-        <input
-          type='text'
-          placeholder={t('domainScanner.placeholder')}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <TrackedButton type='submit' disabled={loading} trackingName='domain_scan_submit'>
-          <span className='button-text-full'>
-            {loading ? t('domainScanner.scanning') : t('domainScanner.scanButton')}
-          </span>
-          <span className='button-text-short'>
+        <form onSubmit={onScan} className='scanner-form'>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={t('domainScanner.placeholder')}
+            disabled={loading}
+            className='domain-input'
+          />
+          <TrackedButton
+            type='submit'
+            trackingEvent='domain_scan_button'
+            trackingData={{ domain: input }}
+            disabled={loading || !input.trim()}
+            className='scan-button'
+          >
             {loading ? t('domainScanner.scanning') : t('domainScanner.scan')}
-          </span>
-        </TrackedButton>
-      </form>
+          </TrackedButton>
+        </form>
 
-      {error && <div className='error'>{error}</div>}
+        {error && <div className='error'>{error}</div>}
 
-      <div className='modular-results'>
         <h3>{t('domainScanner.scanners')}</h3>
-
         <ul className='scanner-list'>
-          {SCANNERS.map((s) => {
-            const prog = scannerProgress.find((p) => p.id === s.id);
-            const status = prog?.status ?? 'idle';
-            const interpretation = prog ? interpretScannerResult(prog) : null;
-
-            // Status icons
-            const getStatusIcon = () => {
-              switch (status) {
-                case 'complete':
-                  return '✓';
-                case 'error':
-                  return '✕';
-                case 'running':
-                  return '⟳';
-                default:
-                  return '○';
-              }
-            };
-
-            // Severity badge component
-            const renderSeverityBadge = () => {
-              if (!interpretation) return null;
-              const severityClass = `severity-badge severity-${interpretation.severity}`;
-              const severityLabel =
-                {
-                  success: t('domainScanner.severityGood'),
-                  info: t('domainScanner.severityInfo'),
-                  warning: t('domainScanner.severityWarning'),
-                  critical: t('domainScanner.severityCritical'),
-                  error: t('domainScanner.severityError'),
-                }[interpretation.severity] ?? '';
-
-              return <span className={severityClass}>{severityLabel}</span>;
-            };
+          {SCANNERS.map((scanner) => {
+            const prog = scannerProgress.find((p) => p.id === scanner.id);
+            const status = prog?.status ?? 'pending';
+            const issues = prog?.issues ?? [];
+            const interpretation = prog ? interpretScannerResult(prog, 0) : null;
 
             return (
-              <li key={s.id} className={`scanner scanner-${status}`}>
+              <li key={scanner.id} className='scanner-item'>
                 <div className='scanner-header'>
                   <div className='scanner-title'>
-                    <span className={`status-icon status-icon-${status}`}>{getStatusIcon()}</span>
-                    <strong>{tScanners(`${s.id}.label`)}</strong>
-                    {renderSeverityBadge()}
+                    <span className='scanner-icon'>{status === 'complete' ? '✅' : '⏳'}</span>
+                    <span className='scanner-name'>{tScanners(scanner.label)}</span>
+                    {interpretation && renderSeverityBadge(interpretation.severity)}
                   </div>
-                  <span className='status-text'>{status}</span>
+                  {renderStatusBadge(status)}
                 </div>
 
-                <div className='scanner-description'>{tScanners(`${s.id}.description`)}</div>
-
-                {prog?.dataSource && (
-                  <div className='scanner-source'>
-                    {t('domainScanner.dataSource')}{' '}
-                    <a href={prog.dataSource.url} target='_blank' rel='noopener noreferrer'>
-                      {prog.dataSource.name}
-                    </a>
-                  </div>
-                )}
+                <div className='scanner-description'>{tScanners(scanner.description)}</div>
 
                 {prog?.summary && <div className='scanner-summary'>{prog.summary}</div>}
 
-                {interpretation && (
-                  <div className={`interpretation interpretation-${interpretation.severity}`}>
-                    <div className='interpretation-message'>{interpretation.message}</div>
-                    <div className='interpretation-recommendation'>{interpretation.recommendation}</div>
-
-                    {s.id === 'sslLabs' && prog?.data && (prog.data as { testUrl?: string }).testUrl ? (
-                      <div className='external-link'>
-                        <a
-                          href={(prog.data as { testUrl?: string }).testUrl!}
-                          target='_blank'
-                          rel='noopener noreferrer'
-                          className='btn-link'
-                        >
-                          {t('domainScanner.viewFullSSLReport')}
-                        </a>
-                      </div>
-                    ) : null}
-
-                    {s.id === 'securityHeaders' && prog?.data && (prog.data as { testUrl?: string }).testUrl ? (
-                      <div className='external-link'>
-                        <a
-                          href={(prog.data as { testUrl?: string }).testUrl!}
-                          target='_blank'
-                          rel='noopener noreferrer'
-                          className='btn-link'
-                        >
-                          {t('domainScanner.viewFullSecurityHeadersReport')}
-                        </a>
-                      </div>
-                    ) : null}
-
-                    {s.id === 'dkim' ? (
-                      <div className='external-link'>
-                        <a href='#' onClick={handleOpenDkimModal} className='btn-link'>
-                          {t('domainScanner.manageDkimSelectors')}
-                        </a>
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-
-                {prog?.status === 'error' && prog.error && (
-                  <div className='error-detail'>
-                    {t('domainScanner.errorPrefix')} {prog.error}
-                  </div>
-                )}
-
                 {prog?.issues && prog.issues.length > 0 && (
-                  <details className='issues-details'>
+                  <details className='scanner-issues'>
                     <summary>{t('domainScanner.issues', { count: prog.issues.length })}</summary>
-                    <ul className='issues-list'>{prog.issues.map((i, idx) => renderIssueWithLinks(i, idx))}</ul>
+                    <ul>
+                      {prog.issues.map((i, idx) => renderIssueWithLinks(i, idx))}
+                    </ul>
                   </details>
                 )}
+
+                {prog?.issues &&
+                  prog.issues.some(
+                    (issue: string) => issue === t('emailAuth.issues.noDKIM', { ns: 'scanners' })
+                  ) && (
+                    <div className='dkim-prompt'>
+                      <p>{t('domainScanner.dkimPrompt.message')}</p>
+                      <button
+                        type='button'
+                        className='dkim-button'
+                        onClick={() => {
+                          setCurrentDomain(input.trim());
+                          setShowDkimModal(true);
+                        }}
+                      >
+                        <svg
+                          width='18'
+                          height='18'
+                          viewBox='0 0 24 24'
+                          fill='currentColor'
+                          xmlns='http://www.w3.org/2000/svg'
+                          style={{ marginRight: 8 }}
+                        >
+                          <path
+                            d={
+                              'M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58c'
+                              + '.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96'
+                              + 'c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.03-.24-.23-.41-.47-.41h-3.84'
+                              + 'c-.24 0-.44.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96'
+                              + 'c-.22-.08-.47 0-.59.22l-1.92 3.32c-.12.22-.07.47.12.61l2.03 1.58'
+                              + 'c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92'
+                              + ' 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c'
+                              + '.03.24.23.41.47.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56'
+                              + ' 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z'
+                              + 'M12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6'
+                              + '-3.6 3.6z'
+                            }
+                          />
+                        </svg>
+                        {t('domainScanner.dkimPrompt.manageButton')}
+                      </button>
+                    </div>
+                  )}
               </li>
             );
           })}
         </ul>
 
         {domainScanAggregate && (
-          <div className='aggregate-results'>
+          <div className='aggregate'>
             <h4>{t('domainScanner.aggregateResult')}</h4>
-            <div className='aggregate-summary'>{domainScanAggregate.summary}</div>
-
-            <div className='aggregate-meta'>
+            <div className='aggregate-info'>
               <p>
-                <strong>{t('domainScanner.domain')}:</strong> {domainScanAggregate.domain}
+                <strong>{t('domainScanner.domain')}</strong> {domainScanAggregate.domain}
               </p>
               <p>
-                <strong>{t('domainScanner.timestamp')}:</strong>{' '}
+                <strong>{t('domainScanner.timestamp')}</strong>{' '}
                 {new Date(domainScanAggregate.timestamp).toLocaleString()}
               </p>
             </div>

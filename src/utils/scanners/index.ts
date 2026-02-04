@@ -2,7 +2,7 @@
 // Each scanner is async and reports its own success/error state; results aggregated.
 
 import i18next from 'i18next';
-import {
+import type {
   DomainScanner,
   ExecutedScannerResult,
   DomainScanAggregate,
@@ -35,7 +35,6 @@ const withTimeout = async <T>(
     promise,
     new Promise<T>((_, reject) =>
       setTimeout(() => {
-        // Translate the scanner label before interpolating into the error message
         const translatedLabel = i18next.t(scannerLabel, { ns: 'scanners' });
         reject(
           new Error(
@@ -70,7 +69,7 @@ export const interpretScannerResult = (scanner: ExecutedScannerResult): ScannerI
     };
   }
 
-  const issueCount = scanner.issues?.length || 0;
+  const issueCount = scanner.issues?.length ?? 0;
 
   // Delegate to scanner-specific interpretation functions
   switch (scanner.id) {
@@ -99,15 +98,22 @@ export const interpretScannerResult = (scanner: ExecutedScannerResult): ScannerI
   }
 };
 
+// Helper: normalize a scanner result so UI never crashes on missing arrays
+const normalizeExecuted = (r: ExecutedScannerResult): ExecutedScannerResult => ({
+  ...r,
+  issues: Array.isArray(r.issues) ? r.issues : [],
+});
+
 // Execute all scanners in parallel for faster results.
 export const runAllScanners = async (
   domain: string,
   onProgress?: (partial: ExecutedScannerResult[]) => void
 ): Promise<DomainScanAggregate> => {
   const trimmed = domain.trim().toLowerCase();
+
+  // We keep a stable local list for progress updates
   const results: ExecutedScannerResult[] = [];
 
-  // Initialize all scanner result objects
   const scannerPromises = SCANNERS.map((scanner) => {
     const start = new Date().toISOString();
 
@@ -123,21 +129,25 @@ export const runAllScanners = async (
           startedAt: start,
           finishedAt: finished,
           ...res,
+          // carry scanner dataSource forward if not provided by scanner.run()
+          dataSource: res?.dataSource ?? scanner.dataSource,
         };
 
-        return executed;
+        return normalizeExecuted(executed);
       } catch (err) {
         const finished = new Date().toISOString();
         const message = err instanceof Error ? err.message : 'Unknown error';
 
-        const executed: ExecutedScannerResult = {
+        const executed: ExecutedScannerResult = normalizeExecuted({
           id: scanner.id,
           label: scanner.label,
           status: 'error',
           startedAt: start,
           finishedAt: finished,
           error: message,
-        };
+          issues: [],
+          dataSource: scanner.dataSource,
+        });
 
         return executed;
       }
@@ -154,10 +164,20 @@ export const runAllScanners = async (
 
   const scanners = await Promise.all(scannerPromises);
 
+  // CRITICAL: DomainScanAggregate must always include issues: []
+  const issues = scanners.flatMap((s) => s.issues ?? []);
+
+  const now = new Date().toISOString();
+
+  // Return both timestamp + scannedAt for compatibility.
+  // Your UI uses `timestamp`, older code may still read `scannedAt`.
   return {
     domain: trimmed,
-    scannedAt: new Date().toISOString(),
+    timestamp: now,
+    // @ts-expect-error - keep for backwards compatibility if older parts still rely on scannedAt
+    scannedAt: now,
     scanners,
+    issues,
   };
 };
 
@@ -168,30 +188,35 @@ export const runScanner = async (scannerId: string, domain: string): Promise<Exe
     throw new Error(i18next.t('common.errors.scannerNotFound', { ns: 'scanners', id: scannerId }));
   }
 
+  const trimmed = domain.trim().toLowerCase();
   const start = new Date().toISOString();
+
   try {
-    const res = await withTimeout(scanner.run(domain), DEFAULT_SCANNER_TIMEOUT, scanner.label);
+    const res = await withTimeout(scanner.run(trimmed), DEFAULT_SCANNER_TIMEOUT, scanner.label);
     const finished = new Date().toISOString();
 
-    return {
+    return normalizeExecuted({
       id: scanner.id,
       label: scanner.label,
       status: 'complete',
       startedAt: start,
       finishedAt: finished,
       ...res,
-    };
+      dataSource: res?.dataSource ?? scanner.dataSource,
+    });
   } catch (err) {
     const finished = new Date().toISOString();
     const message = err instanceof Error ? err.message : 'Unknown error';
 
-    return {
+    return normalizeExecuted({
       id: scanner.id,
       label: scanner.label,
       status: 'error',
       startedAt: start,
       finishedAt: finished,
       error: message,
-    };
+      issues: [],
+      dataSource: scanner.dataSource,
+    });
   }
 };

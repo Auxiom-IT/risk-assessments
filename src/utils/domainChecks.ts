@@ -1,90 +1,177 @@
-// src/utils/domainChecks.ts
-// Centralized network checks used by scanners.
-// IMPORTANT:
-// - DNS is resolved via our own /api/dns/resolve endpoint (system resolver), not dns.google.
-// - Certificates / SecurityHeaders / SSL Labs still call their respective public endpoints.
+// Client-side domain assessment utilities.
+// IMPORTANT: DNS lookups are performed via our SWA Functions API (server-side),
+// so we use the runtime/system resolver instead of dns.google.
 
-type DNSResult = { type: string; data: string[] };
-
-// Helper to keep same-origin API calls working in SWA (front-end -> /api/*).
-function apiUrl(path: string): string {
-  // Ensure we don't accidentally double-slash if base is empty.
-  return path.startsWith('/') ? path : `/${path}`;
+export interface DNSRecordResult {
+  type: string;
+  data: string[];
 }
 
-export const fetchDNS = async (domain: string, type: string): Promise<DNSResult | null> => {
+export interface DomainScanResult {
+  domain: string;
+  timestamp: string;
+  dns: DNSRecordResult[];
+  spf?: string;
+  dmarc?: string;
+  dkimSelectorsFound: string[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  certificates?: any[]; // Raw crt.sh JSON rows
+  issues: string[]; // Derived issue strings
+}
+
+type DnsApiResponse = {
+  type: string;
+  data: string[];
+};
+
+// Server-side DNS resolver (Azure SWA Function).
+// This avoids CORS issues and avoids relying on dns.google.
+// Function route: /api/dns/resolve?name=example.com&type=TXT
+export const fetchDNS = async (domain: string, rrtype: string): Promise<DNSRecordResult | null> => {
   try {
-    const url = apiUrl(
-      `/api/dns/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`
-    );
+    const url = `/api/dns/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(rrtype)}`;
+    const res = await fetch(url);
 
-    const resp = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    });
+    if (!res.ok) return { type: rrtype, data: [] };
 
-    if (!resp.ok) return null;
+    const json = (await res.json()) as Partial<DnsApiResponse>;
+    const data = Array.isArray(json.data) ? json.data.filter((d) => typeof d === 'string') : [];
 
-    const json = (await resp.json()) as { records?: unknown };
-
-    const records =
-      Array.isArray(json.records) ? json.records.filter((r): r is string => typeof r === 'string') : [];
-
-    return { type, data: records };
+    return { type: rrtype, data };
   } catch {
     return null;
   }
 };
 
-export const fetchEmailAuth = async (domain: string) => {
-  // Example behavior in this project: the emailAuth scanner uses DNS TXT/MX lookups.
-  // Keep this as-is if other code calls fetchEmailAuth directly; otherwise scanners do direct DNS calls.
-  const mx = await fetchDNS(domain, 'MX');
-  const txt = await fetchDNS(domain, 'TXT');
-
-  return {
-    mx: mx?.data ?? [],
-    txt: txt?.data ?? [],
-  };
+// --- Convenience wrappers (your scanners were importing these) ---
+export const fetchA = async (domain: string): Promise<string[]> => {
+  const rec = await fetchDNS(domain, 'A');
+  return rec?.data || [];
 };
 
-export const fetchCertificates = async (host: string) => {
-  // crt.sh query; returns list of cert entries in JSON format.
-  // (You can switch this later if you want a different source.)
-  const url = `https://crt.sh/?q=${encodeURIComponent(host)}&output=json`;
-  const resp = await fetch(url, { headers: { Accept: 'application/json' } });
-
-  if (!resp.ok) {
-    throw new Error(`crt.sh request failed (${resp.status})`);
-  }
-
-  // crt.sh sometimes returns duplicate objects; caller can dedupe if desired.
-  return resp.json();
+export const fetchAAAA = async (domain: string): Promise<string[]> => {
+  const rec = await fetchDNS(domain, 'AAAA');
+  return rec?.data || [];
 };
 
-export const fetchSecurityHeaders = async (domain: string) => {
-  // Uses securityheaders.com public endpoint (as this project originally did).
-  // Note: if you need to avoid their rate limits, we can proxy this via /api later.
-  const url = `https://securityheaders.com/?q=${encodeURIComponent(domain)}&followRedirects=on`;
-  const resp = await fetch(url, { redirect: 'follow' });
-
-  if (!resp.ok) {
-    throw new Error(`SecurityHeaders request failed (${resp.status})`);
-  }
-
-  return resp.text();
+export const fetchCNAME = async (domain: string): Promise<string[]> => {
+  const rec = await fetchDNS(domain, 'CNAME');
+  return rec?.data || [];
 };
 
-export const fetchSslLabs = async (host: string, all: 'on' | 'done' = 'done') => {
-  // SSL Labs API requires all=on|done only.
-  const url = `https://api.ssllabs.com/api/v3/analyze?host=${encodeURIComponent(host)}&all=${all}`;
-  const resp = await fetch(url, { headers: { Accept: 'application/json' } });
+export const fetchMX = async (domain: string): Promise<string[]> => {
+  const rec = await fetchDNS(domain, 'MX');
+  return rec?.data || [];
+};
 
-  if (!resp.ok) {
-    // SSL Labs returns friendly JSON errors sometimes, but not always.
-    const txt = await resp.text().catch(() => '');
-    throw new Error(`SSL Labs request failed (${resp.status}) ${txt}`.trim());
+export const fetchTXT = async (domain: string): Promise<string[]> => {
+  const rec = await fetchDNS(domain, 'TXT');
+  return rec?.data || [];
+};
+
+export const extractSPF = (txtRecords: string[]): string | undefined => {
+  return txtRecords.find((r) => r.toLowerCase().startsWith('v=spf1'));
+};
+
+export const fetchDMARC = async (domain: string): Promise<string | undefined> => {
+  const name = `_dmarc.${domain}`;
+  const txt = await fetchTXT(name);
+  return txt.find((t) => t.toLowerCase().includes('v=dmarc'));
+};
+
+export const checkDKIM = async (domain: string, customSelectors?: string[]): Promise<string[]> => {
+  const defaultSelectors = [
+    // Generic/Common
+    'default',
+    'dkim',
+    'mail',
+    'email',
+    'smtp',
+
+    // Google Workspace / Gmail
+    'google',
+    'googlemail',
+
+    // Microsoft 365 / Office 365
+    'selector1',
+    'selector2',
+
+    // Common patterns
+    'k1',
+    'k2',
+    'k3',
+    's1',
+    's2',
+    's3',
+    'key1',
+    'key2',
+    'key3',
+    'dkim1',
+    'dkim2',
+    'dkim3',
+
+    // Marketing platforms
+    'mailgun',
+    'sendgrid',
+    'mandrill',
+    'sparkpost',
+    'mta',
+    'mta1',
+    'mta2',
+    'pm',
+    'pm1',
+    'pm2', // Postmark
+    'em',
+    'em1',
+    'em2', // Email service providers
+
+    // Other common patterns
+    'mx',
+    'mx1',
+    'mx2',
+    'smtpapi',
+    'api',
+    'marketing',
+    'transactional',
+  ];
+
+  const selectors = customSelectors && customSelectors.length > 0 ? customSelectors : defaultSelectors;
+
+  const checks = selectors.map(async (sel) => {
+    const name = `${sel}._domainkey.${domain}`;
+    const txt = await fetchTXT(name);
+
+    if (
+      txt.some((t) => {
+        if (t.includes('v=DKIM1')) return true;
+        const pMatch = t.match(/p=([^;\s]+)/);
+        return pMatch && pMatch[1] && pMatch[1].length > 0;
+      })
+    ) {
+      return sel;
+    }
+    return null;
+  });
+
+  const results = await Promise.all(checks);
+  return results.filter((r): r is string => r !== null);
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const fetchCertificates = async (domain: string): Promise<any[] | undefined> => {
+  try {
+    const res = await fetch(`https://crt.sh/?q=${encodeURIComponent(domain)}&output=json`);
+    if (!res.ok) return undefined;
+    return await res.json();
+  } catch {
+    return undefined;
   }
+};
 
-  return resp.json();
+export const deriveIssues = (scan: Partial<DomainScanResult>): string[] => {
+  const issues: string[] = [];
+  if (scan.spf === undefined) issues.push('Missing SPF record');
+  if (scan.dmarc === undefined) issues.push('Missing DMARC record');
+  if ((scan.dkimSelectorsFound || []).length === 0) issues.push('No DKIM selectors detected (heuristic)');
+  return issues;
 };

@@ -2,73 +2,88 @@ import type { DomainScanner } from '../domainscan';
 import { fetchTXT } from '../domainChecks';
 
 function stripQuotes(v: string) {
-  return v.replace(/^"|"$/g, '');
+  return v.replace(/^"+|"+$/g, '').trim();
+}
+
+function firstTxtValue(txtRecords: string[] | undefined) {
+  if (!txtRecords || txtRecords.length === 0) return null;
+  // Some providers return chunks like ["v=spf1 ...", "..."] — we keep it simple:
+  // - join if multiple, otherwise use first
+  const joined = txtRecords.join('');
+  return stripQuotes(joined);
 }
 
 export const emailAuthScanner: DomainScanner = {
   id: 'emailAuth',
-  label: 'Email Authentication',
-  description: 'Checks SPF, DMARC and DKIM records',
+  label: 'emailAuth.label',
+  description: 'emailAuth.description',
+  dataSource: {
+    name: 'DNS',
+    url: 'https://www.iana.org/domains/reserved',
+  },
   run: async (domain: string) => {
-    const issues: string[] = [];
-    const spf = await fetchTXT(domain).catch(() => []);
-    const dmarc = await fetchTXT(`_dmarc.${domain}`).catch(() => []);
+    try {
+      // SPF is stored at the root domain as TXT containing v=spf1
+      const txtRoot = await fetchTXT(domain);
 
-    const spfVal = spf.map(stripQuotes).find((t) => t.toLowerCase().startsWith('v=spf1'));
-    if (!spfVal) issues.push('No SPF record found');
+      // DMARC is stored at _dmarc.<domain> as TXT containing v=DMARC1
+      const txtDmarc = await fetchTXT(`_dmarc.${domain}`);
 
-    const dmarcVal = dmarc.map(stripQuotes).find((t) => t.toLowerCase().startsWith('v=dmarc1'));
-    if (!dmarcVal) issues.push('No DMARC record found');
+      const spf = firstTxtValue((txtRoot ?? []).filter((r) => r.includes('v=spf1')));
+      const dmarc = firstTxtValue((txtDmarc ?? []).filter((r) => r.includes('v=DMARC1')));
 
-    return {
-      data: { spf: spfVal ?? null, dmarc: dmarcVal ?? null },
-      summary: `SPF:${spfVal ? 'yes' : 'no'}, DMARC:${dmarcVal ? 'yes' : 'no'}`,
-      issues,
-    };
+      const issues: string[] = [];
+
+      if (!spf) issues.push('SPF record not found');
+      if (!dmarc) issues.push('DMARC record not found');
+
+      // DKIM is more complex (selectors). If your app handles DKIM via a separate
+      // selector flow/modal, we avoid doing selector guessing here to preserve behavior.
+
+      return {
+        data: {
+          spf: !!spf,
+          dmarc: !!dmarc,
+          spfRecord: spf ?? undefined,
+          dmarcRecord: dmarc ?? undefined,
+        },
+        summary: `SPF:${spf ? 'yes' : 'no'}, DMARC:${dmarc ? 'yes' : 'no'}`,
+        issues,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      return {
+        summary: 'Email authentication lookup failed',
+        issues: [`Error: ${msg}`],
+      };
+    }
   },
 };
 
-/**
- * Required by src/utils/scanners/index.ts
- * Used for UI severity badge + interpretation messaging.
- */
+// ✅ Exported ONCE (this is the thing your build complained about)
 export const interpretEmailAuthResult = (result: any) => {
-  if (result?.issues?.length) {
-    return {
-      severity: 'warning',
-      message: 'Email authentication records found with warnings.',
-      recommendation: 'Add or correct SPF and DMARC records to improve email deliverability and spoofing protection.',
-    };
-  }
-
-  return {
-    severity: 'success',
-    message: 'Email authentication records retrieved successfully.',
-    recommendation: 'SPF and DMARC appear to be configured correctly.',
-  };
-};
-// Used by utils/scanners/index.ts to provide a consistent interpretation object
-export function interpretEmailAuthResult(result: any) {
   if (result?.status === 'error') {
     return {
-      severity: 'error' as const,
-      message: 'Email authentication checks failed.',
-      recommendation: 'Please try again later or check your network connection.',
+      severity: 'error',
+      message: result?.error || 'Email authentication check failed',
+      recommendation: 'Please try again later.',
     };
   }
 
-  const issuesCount = (result?.issues ?? []).length;
-  if (issuesCount > 0) {
+  const issueCount = Array.isArray(result?.issues) ? result.issues.length : 0;
+
+  if (issueCount === 0) {
     return {
-      severity: 'warning' as const,
-      message: 'Email authentication records found with warnings.',
-      recommendation: 'Add or correct SPF/DMARC/DKIM records to improve email security.',
+      severity: 'success',
+      message: 'Email authentication records look good.',
+      recommendation: 'No action needed.',
     };
   }
 
+  // Warnings by default (missing SPF/DMARC typically)
   return {
-    severity: 'success' as const,
-    message: 'Email authentication records look good.',
-    recommendation: 'No email authentication issues detected.',
+    severity: 'warning',
+    message: 'Email authentication records found with warnings.',
+    recommendation: 'Add or correct SPF/DMARC records to improve deliverability and spoofing protection.',
   };
-}
+};

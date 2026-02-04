@@ -47,3 +47,28 @@ export const interpretEmailAuthResult = (result: any) => {
     recommendation: 'SPF and DMARC appear to be configured correctly.',
   };
 };
+// Used by utils/scanners/index.ts to provide a consistent interpretation object
+export function interpretEmailAuthResult(result: any) {
+  if (result?.status === 'error') {
+    return {
+      severity: 'error' as const,
+      message: 'Email authentication checks failed.',
+      recommendation: 'Please try again later or check your network connection.',
+    };
+  }
+
+  const issuesCount = (result?.issues ?? []).length;
+  if (issuesCount > 0) {
+    return {
+      severity: 'warning' as const,
+      message: 'Email authentication records found with warnings.',
+      recommendation: 'Add or correct SPF/DMARC/DKIM records to improve email security.',
+    };
+  }
+
+  return {
+    severity: 'success' as const,
+    message: 'Email authentication records look good.',
+    recommendation: 'No email authentication issues detected.',
+  };
+}

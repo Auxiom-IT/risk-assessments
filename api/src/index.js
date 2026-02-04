@@ -1,2 +1,2 @@
 import "./functions/ping.js";
-import "./functions/ssllabs-analyze.js";
+import "./functions/certificates.js";

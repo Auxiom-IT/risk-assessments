@@ -20,10 +20,8 @@ const DomainScanner = () => {
   const [showDkimModal, setShowDkimModal] = useState(false);
   const [currentDomain, setCurrentDomain] = useState<string>('');
 
-  // ✅ Defensive: older cached/imported aggregates may not have `issues`
-  const aggregateIssues: string[] = Array.isArray(domainScanAggregate?.issues)
-    ? domainScanAggregate!.issues
-    : [];
+  // ✅ Defensive: older stored aggregates / transient states may not have `issues`
+  const aggregateIssues = domainScanAggregate?.issues ?? [];
 
   const onScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +42,6 @@ const DomainScanner = () => {
     setLoading(true);
     setCurrentDomain(validation.normalizedDomain!);
     trackFormSubmit('domain_scan', { domain: validation.normalizedDomain });
-
     try {
       // Use normalized domain for scanning
       await runScanners(validation.normalizedDomain!);
@@ -88,7 +85,6 @@ const DomainScanner = () => {
     <div className='panel'>
       <h2>{t('domainScanner.title')}</h2>
       <p>{t('domainScanner.description')}</p>
-
       <form onSubmit={onScan} className='domain-form'>
         <input
           type='text'
@@ -105,9 +101,7 @@ const DomainScanner = () => {
           </span>
         </TrackedButton>
       </form>
-
       {error && <div className='error'>{error}</div>}
-
       <div className='modular-results'>
         <h3>{t('domainScanner.scanners')}</h3>
         <ul className='scanner-list'>
@@ -155,9 +149,7 @@ const DomainScanner = () => {
                   </div>
                   <span className='status-text'>{status}</span>
                 </div>
-
                 <div className='scanner-description'>{tScanners(`${s.id}.description`)}</div>
-
                 {prog?.dataSource && (
                   <div className='scanner-source'>
                     {t('domainScanner.dataSource')}{' '}
@@ -166,14 +158,12 @@ const DomainScanner = () => {
                     </a>
                   </div>
                 )}
-
                 {prog?.summary && <div className='scanner-summary'>{prog.summary}</div>}
 
                 {interpretation && (
                   <div className={`interpretation interpretation-${interpretation.severity}`}>
                     <div className='interpretation-message'>{interpretation.message}</div>
                     <div className='interpretation-recommendation'>{interpretation.recommendation}</div>
-
                     {s.id === 'sslLabs' && prog?.data && (prog.data as { testUrl?: string }).testUrl ? (
                       <div className='external-link'>
                         <a
@@ -186,10 +176,7 @@ const DomainScanner = () => {
                         </a>
                       </div>
                     ) : null}
-
-                    {s.id === 'securityHeaders' &&
-                    prog?.data &&
-                    (prog.data as { testUrl?: string }).testUrl ? (
+                    {s.id === 'securityHeaders' && prog?.data && (prog.data as { testUrl?: string }).testUrl ? (
                       <div className='external-link'>
                         <a
                           href={(prog.data as { testUrl?: string }).testUrl!}
@@ -209,7 +196,6 @@ const DomainScanner = () => {
                     {t('domainScanner.errorPrefix')} {prog.error}
                   </div>
                 )}
-
                 {prog?.issues && prog.issues.length > 0 && (
                   <details className='issues-details'>
                     <summary>{t('domainScanner.issues', { count: prog.issues.length })}</summary>
@@ -221,9 +207,7 @@ const DomainScanner = () => {
                 {s.id === 'emailAuth' &&
                   prog?.status === 'complete' &&
                   prog.issues &&
-                  prog.issues.some(
-                    (issue: string) => issue === t('emailAuth.issues.noDKIM', { ns: 'scanners' })
-                  ) &&
+                  prog.issues.some((issue: string) => issue === t('emailAuth.issues.noDKIM', { ns: 'scanners' })) &&
                   currentDomain && (
                     <div className='scanner-dkim-prompt'>
                       <svg className='info-icon' viewBox='0 0 24 24' fill='currentColor'>
@@ -236,11 +220,7 @@ const DomainScanner = () => {
                       </svg>
                       <div className='prompt-content'>
                         <span>{t('domainScanner.dkimPrompt.description')}</span>
-                        <button
-                          type='button'
-                          onClick={handleOpenDkimModal}
-                          className='manage-selectors-btn'
-                        >
+                        <button type='button' onClick={handleOpenDkimModal} className='manage-selectors-btn'>
                           <svg className='btn-icon' viewBox='0 0 24 24' fill='currentColor'>
                             <path
                               d={
@@ -280,7 +260,7 @@ const DomainScanner = () => {
               </p>
             </div>
 
-            {/* ✅ use safe aggregateIssues */}
+            {/* ✅ Use safe aggregateIssues */}
             <h5>
               {t('domainScanner.allIssues')} ({aggregateIssues.length})
             </h5>
@@ -297,7 +277,6 @@ const DomainScanner = () => {
           </div>
         )}
       </div>
-
       <p className='disclaimer'>{t('domainScanner.disclaimer')}</p>
       <Footer />
 

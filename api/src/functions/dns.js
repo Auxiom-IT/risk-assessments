@@ -1,70 +1,103 @@
-// api/src/functions/dns.js
-import { app } from '@azure/functions';
-import dns from 'node:dns/promises';
+import { app } from "@azure/functions";
+import dns from "node:dns/promises";
 
-function badRequest(message) {
-  return {
-    status: 400,
-    jsonBody: { ok: false, error: message },
-  };
-}
-
-async function resolveRecords(name, type) {
-  switch (type) {
-    case 'A': {
-      const out = await dns.resolve4(name);
-      return out;
-    }
-    case 'AAAA': {
-      const out = await dns.resolve6(name);
-      return out;
-    }
-    case 'CNAME': {
-      const out = await dns.resolveCname(name);
-      return out;
-    }
-    case 'MX': {
-      const out = await dns.resolveMx(name);
-      // Convert to simple strings so UI can display easily
-      return out.map((m) => `${m.priority} ${m.exchange}`);
-    }
-    case 'TXT': {
-      const out = await dns.resolveTxt(name);
-      // resolveTxt returns string[][]; join each record chunk
-      return out.map((chunks) => chunks.join(''));
-    }
-    default:
-      return null;
-  }
-}
-
-app.http('dnsResolve', {
-  methods: ['GET'],
-  authLevel: 'anonymous',
-  route: 'dns/resolve',
-  handler: async (req) => {
-    const name = req.query.get('name')?.trim();
-    const type = req.query.get('type')?.trim().toUpperCase();
-
-    if (!name) return badRequest("Missing query param 'name'");
-    if (!type) return badRequest("Missing query param 'type'");
-
-    const allowed = new Set(['A', 'AAAA', 'CNAME', 'MX', 'TXT']);
-    if (!allowed.has(type)) return badRequest(`Unsupported type '${type}'`);
-
+/**
+ * Azure SWA API: DNS resolver using the runtime's configured DNS.
+ * Route: /api/dns/resolve?name=example.com&type=TXT
+ *
+ * Returns a Google-DNS-like payload shape:
+ * { Answer: [{ name, type, TTL, data }, ...] }
+ */
+app.http("dnsResolve", {
+  methods: ["GET"],
+  authLevel: "anonymous",
+  route: "dns/resolve",
+  handler: async (request) => {
     try {
-      const records = await resolveRecords(name, type);
-      if (!records) return badRequest(`Unsupported type '${type}'`);
+      const url = new URL(request.url);
+      const name = (url.searchParams.get("name") || "").trim();
+      const type = (url.searchParams.get("type") || "").trim().toUpperCase();
+
+      if (!name) {
+        return {
+          status: 400,
+          jsonBody: { error: "Missing required query param: name" },
+        };
+      }
+
+      const allowed = new Set(["A", "AAAA", "MX", "TXT", "CNAME"]);
+      if (!allowed.has(type)) {
+        return {
+          status: 400,
+          jsonBody: { error: "Invalid type. Allowed: A, AAAA, MX, TXT, CNAME" },
+        };
+      }
+
+      // Build a google-ish "Answer" array
+      // type codes match DNS RR types used by Google DNS JSON API:
+      // A=1, CNAME=5, MX=15, TXT=16, AAAA=28
+      const typeCode = { A: 1, CNAME: 5, MX: 15, TXT: 16, AAAA: 28 }[type];
+
+      let answer = [];
+
+      if (type === "A") {
+        const records = await dns.resolve4(name, { ttl: true });
+        answer = records.map((r) => ({
+          name,
+          type: typeCode,
+          TTL: typeof r.ttl === "number" ? r.ttl : 0,
+          data: r.address,
+        }));
+      } else if (type === "AAAA") {
+        const records = await dns.resolve6(name, { ttl: true });
+        answer = records.map((r) => ({
+          name,
+          type: typeCode,
+          TTL: typeof r.ttl === "number" ? r.ttl : 0,
+          data: r.address,
+        }));
+      } else if (type === "CNAME") {
+        const records = await dns.resolveCname(name);
+        answer = records.map((c) => ({
+          name,
+          type: typeCode,
+          TTL: 0,
+          data: c,
+        }));
+      } else if (type === "MX") {
+        const records = await dns.resolveMx(name);
+        answer = records.map((mx) => ({
+          name,
+          type: typeCode,
+          TTL: 0,
+          data: `${mx.priority} ${mx.exchange}`,
+        }));
+      } else if (type === "TXT") {
+        const records = await dns.resolveTxt(name);
+        // dns.resolveTxt returns string[][] (chunks); join them
+        answer = records.map((chunks) => ({
+          name,
+          type: typeCode,
+          TTL: 0,
+          data: chunks.join(""),
+        }));
+      }
 
       return {
         status: 200,
-        jsonBody: { ok: true, name, type, records },
+        jsonBody: {
+          Answer: answer,
+        },
       };
     } catch (err) {
-      // NXDOMAIN, timeout, etc — return 200 with empty records so UI doesn't crash.
+      // Keep response deterministic + useful
+      const message = err instanceof Error ? err.message : "Unknown error";
       return {
-        status: 200,
-        jsonBody: { ok: true, name, type, records: [], error: String(err?.message ?? err) },
+        status: 502,
+        jsonBody: {
+          error: "DNS resolution failed",
+          message,
+        },
       };
     }
   },

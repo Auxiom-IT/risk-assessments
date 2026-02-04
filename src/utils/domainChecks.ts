@@ -1,66 +1,79 @@
-// Centralized fetchers for DNS + certificate-related checks.
-// IMPORTANT: Browsers cannot do raw DNS lookups directly.
-// To avoid dns.google entirely, we call our SWA API (/api/dns/resolve)
-// which uses Node's built-in DNS resolver (runtime-configured DNS).
+// src/utils/domainChecks.ts
+// DNS + certificate helpers used by scanners.
+// IMPORTANT: Browsers cannot perform DNS lookups directly.
+// We call our own Azure Functions endpoints which use the platform DNS resolvers.
 
-export type Answer = {
-  data: string;
-  TTL: number;
-};
+export type DNSRecordType = 'A' | 'AAAA' | 'MX' | 'TXT' | 'CNAME';
 
-export type DNSResponse = {
-  Answer?: Answer[];
-};
+type DnsApiResponse =
+  | { ok: true; name: string; type: DNSRecordType; answers: string[] }
+  | { ok: false; error: string };
 
-const DNS_RECORD_TYPES = ['A', 'AAAA', 'MX', 'TXT', 'CNAME'] as const;
-type DnsRecordType = (typeof DNS_RECORD_TYPES)[number];
+type CertificatesApiResponse =
+  | { ok: true; host: string; certificates: unknown }
+  | { ok: false; error: string };
+
+function apiUrl(path: string, params: Record<string, string>) {
+  const url = new URL(path, window.location.origin);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  return url.toString();
+}
 
 /**
- * Calls our server-side DNS resolver.
- * This uses the platform/runtime configured DNS, not dns.google.
+ * Generic DNS fetcher (calls /api/dns).
+ * Uses the server-side resolver (Azure Functions / Node), not dns.google.
  */
-const fetchFromDnsApi = async (name: string, type: DnsRecordType): Promise<DNSResponse> => {
-  const url = `/api/dns/resolve?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}`;
+export async function fetchDNS(name: string, type: DNSRecordType): Promise<string[]> {
+  const url = apiUrl('/api/dns', { name, type });
 
   const res = await fetch(url, {
     method: 'GET',
-    headers: { Accept: 'application/json' },
+    headers: { Accept: 'application/json' }
   });
 
   if (!res.ok) {
-    // Avoid throwing opaque errors; include status for UI/debugging
-    const text = await res.text().catch(() => '');
-    throw new Error(`DNS API error (${res.status}) ${text || ''}`.trim());
+    throw new Error(`DNS lookup failed (${res.status})`);
   }
 
-  return (await res.json()) as DNSResponse;
-};
+  const data = (await res.json()) as DnsApiResponse;
 
-// This shape is used by your scanners to build per-record summaries.
-export interface DNSResults {
-  A: Answer[];
-  AAAA: Answer[];
-  MX: Answer[];
-  TXT: Answer[];
-  CNAME: Answer[];
+  if (!data || data.ok !== true) {
+    const msg = data && 'error' in data ? data.error : 'Unknown DNS API error';
+    throw new Error(msg);
+  }
+
+  return Array.isArray(data.answers) ? data.answers : [];
 }
 
-export const fetchDNS = async (domain: string): Promise<DNSResults> => {
-  const [A, AAAA, MX, TXT, CNAME] = await Promise.all([
-    fetchFromDnsApi(domain, 'A').then((r) => r.Answer ?? []),
-    fetchFromDnsApi(domain, 'AAAA').then((r) => r.Answer ?? []),
-    fetchFromDnsApi(domain, 'MX').then((r) => r.Answer ?? []),
-    fetchFromDnsApi(domain, 'TXT').then((r) => r.Answer ?? []),
-    fetchFromDnsApi(domain, 'CNAME').then((r) => r.Answer ?? []),
-  ]);
+// Backwards/explicit helpers used by scanners:
+export const fetchA = (name: string) => fetchDNS(name, 'A');
+export const fetchAAAA = (name: string) => fetchDNS(name, 'AAAA');
+export const fetchMX = (name: string) => fetchDNS(name, 'MX');
+export const fetchTXT = (name: string) => fetchDNS(name, 'TXT');
+export const fetchCNAME = (name: string) => fetchDNS(name, 'CNAME');
 
-  return { A, AAAA, MX, TXT, CNAME };
-};
+/**
+ * Certificates fetcher (calls /api/certificates).
+ * Your existing function already exposes this route (per your ping working).
+ */
+export async function fetchCertificates(host: string): Promise<unknown> {
+  const url = apiUrl('/api/certificates', { host });
 
-// Certificate transparency lookup (kept as-is)
-export const fetchCertificates = async (domain: string) => {
-  const url = `https://crt.sh/?q=${encodeURIComponent(domain)}&output=json`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Certificate lookup failed');
-  return response.json();
-};
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  });
+
+  if (!res.ok) {
+    throw new Error(`Certificates lookup failed (${res.status})`);
+  }
+
+  const data = (await res.json()) as CertificatesApiResponse;
+
+  if (!data || data.ok !== true) {
+    const msg = data && 'error' in data ? data.error : 'Unknown certificates API error';
+    throw new Error(msg);
+  }
+
+  return data.certificates;
+}

@@ -47,7 +47,7 @@ describe('certificateScanner', () => {
         id: 1,
         common_name: 'example.com',
         name_value: 'example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2024-01-01T00:00:00Z',
         not_after: fiveDaysFromNow,
       },
@@ -55,9 +55,13 @@ describe('certificateScanner', () => {
 
     const result = await certificateScanner.run('example.com');
 
-    // Check for expiring soon warning with "immediately"
     expect(
-      result.issues?.some((issue) => issue.includes('expires in') && issue.includes('day') && issue.includes('immediately'))
+      result.issues?.some(
+        (issue) =>
+          issue.includes('expires in') &&
+          issue.includes('day') &&
+          issue.includes('immediately')
+      )
     ).toBe(true);
   });
 
@@ -70,7 +74,7 @@ describe('certificateScanner', () => {
         id: 1,
         common_name: 'example.com',
         name_value: 'example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2024-01-01T00:00:00Z',
         not_after: twentyDaysFromNow,
       },
@@ -78,11 +82,13 @@ describe('certificateScanner', () => {
 
     const result = await certificateScanner.run('example.com');
 
-    // Avoid asserting an exact day number (19/20/21 can vary with rounding/timezones).
-    // Assert meaning: expiring soon + renewal soon.
+    // Don't assert exact day number (rounding/timezone differences can make it 19/20/21).
     expect(
       result.issues?.some(
-        (issue) => issue.includes('expires in') && issue.includes('day') && issue.includes('renewal soon')
+        (issue) =>
+          issue.includes('expires in') &&
+          issue.includes('day') &&
+          issue.includes('renewal soon')
       )
     ).toBe(true);
   });
@@ -116,7 +122,7 @@ describe('certificateScanner', () => {
         id: 1,
         common_name: '*.example.com',
         name_value: '*.example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2024-01-01T00:00:00Z',
         not_after: futureDate,
       },
@@ -135,7 +141,7 @@ describe('certificateScanner', () => {
       id: i,
       common_name: `subdomain${i}.example.com`,
       name_value: `subdomain${i}.example.com`,
-      issuer_name: "Let's Encrypt",
+      issuer_name: 'Let\'s Encrypt',
       not_before: '2024-01-01T00:00:00Z',
       not_after: futureDate,
     }));
@@ -157,7 +163,7 @@ describe('certificateScanner', () => {
         id: 1,
         common_name: 'old.example.com',
         name_value: 'old.example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2023-01-01T00:00:00Z',
         not_after: recentlyExpired,
       },
@@ -165,7 +171,7 @@ describe('certificateScanner', () => {
         id: 2,
         common_name: 'current.example.com',
         name_value: 'current.example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2024-01-01T00:00:00Z',
         not_after: futureDate,
       },
@@ -187,7 +193,7 @@ describe('certificateScanner', () => {
         id: 1,
         common_name: 'example.com',
         name_value: 'example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2023-01-01T00:00:00Z',
         not_after: recentlyExpired,
       },
@@ -195,7 +201,7 @@ describe('certificateScanner', () => {
         id: 2,
         common_name: 'example.com',
         name_value: 'example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2024-01-01T00:00:00Z',
         not_after: futureDate,
       },
@@ -210,7 +216,7 @@ describe('certificateScanner', () => {
     const mockFetchCertificates = domainChecks.fetchCertificates as ReturnType<typeof vi.fn>;
     const futureDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
 
-    const issuers = ["Let's Encrypt", 'DigiCert', 'Comodo', 'GeoTrust', 'GlobalSign'];
+    const issuers = ['Let\'s Encrypt', 'DigiCert', 'Comodo', 'GeoTrust', 'GlobalSign'];
     const certs = issuers.map((issuer, i) => ({
       id: i,
       common_name: `subdomain${i}.example.com`,
@@ -237,7 +243,7 @@ describe('certificateScanner', () => {
         id: 1,
         common_name: 'example.com',
         name_value: 'example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2024-01-01T00:00:00Z',
         not_after: futureDate,
       },
@@ -245,7 +251,7 @@ describe('certificateScanner', () => {
         id: 2,
         common_name: 'old.example.com',
         name_value: 'old.example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2022-01-01T00:00:00Z',
         not_after: expired,
       },
@@ -268,7 +274,7 @@ describe('certificateScanner', () => {
         id: 1,
         common_name: 'example.com',
         name_value: 'example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2024-01-01T00:00:00Z', // Older cert
         not_after: oldDate,
       },
@@ -276,7 +282,7 @@ describe('certificateScanner', () => {
         id: 2,
         common_name: 'example.com',
         name_value: 'example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2024-06-01T00:00:00Z', // Newer cert
         not_after: futureDate,
       },
@@ -285,7 +291,6 @@ describe('certificateScanner', () => {
     const result = await certificateScanner.run('example.com');
     const data = result.data as { activeCertCount: number };
 
-    // Should only count 1 active cert (the newer one)
     expect(data.activeCertCount).toBe(1);
   });
 
@@ -298,7 +303,7 @@ describe('certificateScanner', () => {
         id: 1,
         common_name: 'example.com',
         name_value: 'example.com',
-        issuer_name: "Let's Encrypt",
+        issuer_name: 'Let\'s Encrypt',
         not_before: '2024-01-01T00:00:00Z',
         not_after: futureDate,
       },
@@ -315,7 +320,7 @@ describe('certificateScanner', () => {
     expect(data.certCount).toBe(1);
     expect(data.activeCertCount).toBe(1);
     expect(data.expiredCertCount).toBe(0);
-    expect(data.uniqueIssuers).toContain("Let's Encrypt");
+    expect(data.uniqueIssuers).toContain('Let\'s Encrypt');
   });
 });
 

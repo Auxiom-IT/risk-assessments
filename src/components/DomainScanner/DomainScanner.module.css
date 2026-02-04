@@ -1,0 +1,256 @@
+/* src/components/DomainScanner/DomainScanner.module.css */
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.description {
+  color: rgba(0, 0, 0, 0.72);
+  margin-top: 8px;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.inputContainer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 12px 0 16px 0;
+}
+
+.input {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  outline: none;
+}
+
+.input:disabled {
+  opacity: 0.7;
+}
+
+.button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.secondaryButton {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: transparent;
+  cursor: pointer;
+}
+
+.error {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(180, 0, 0, 0.25);
+  background: rgba(255, 0, 0, 0.06);
+}
+
+.progressSection {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.progressList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.progressItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.progressLabel {
+  font-weight: 600;
+}
+
+.resultsSection {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.aggregateHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.aggregateMeta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 0.95rem;
+}
+
+.aggregateSummary {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.issueCount {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dataSource {
+  margin-top: 10px;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 0.95rem;
+}
+
+.resultsList {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.resultItem {
+  border-radius: 12px;
+}
+
+.scannerResult {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.scannerHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.scannerStatusContainer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.summary {
+  margin-top: 8px;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.issues {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.recommendationBox {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.message {
+  margin: 0;
+}
+
+.recommendation {
+  margin: 8px 0 0 0;
+}
+
+.extraActions {
+  margin-top: 14px;
+}
+
+/* Status badges */
+.status {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.complete {
+  background: rgba(0, 160, 70, 0.12);
+  border-color: rgba(0, 160, 70, 0.22);
+}
+
+.running {
+  background: rgba(255, 170, 0, 0.14);
+  border-color: rgba(255, 170, 0, 0.24);
+}
+
+.error {
+  /* keep same base error container styling */
+}
+
+/* Severity badges */
+.severity {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.critical {
+  background: rgba(220, 0, 0, 0.12);
+  border-color: rgba(220, 0, 0, 0.22);
+}
+
+.warning {
+  background: rgba(255, 170, 0, 0.14);
+  border-color: rgba(255, 170, 0, 0.24);
+}
+
+.info {
+  background: rgba(0, 120, 255, 0.12);
+  border-color: rgba(0, 120, 255, 0.22);
+}
+
+.good {
+  background: rgba(0, 160, 70, 0.12);
+  border-color: rgba(0, 160, 70, 0.22);
+}

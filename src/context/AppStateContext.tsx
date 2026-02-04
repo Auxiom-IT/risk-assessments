@@ -1,205 +1,300 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
-import {
-  SCANNERS,
-  runAllScanners,
-  type DomainScanAggregate,
-  type ExecutedScannerResult
-} from '../utils/scanners';
-import { applyAnswerMigration } from '../utils/answerMigration';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import questionsData from '../data/questions.json';
+import { Question, RawQuestion } from '../types/questions';
+import { computeScore, ScoreResult } from '../utils/scoring';
+import { mapRisks, RiskMappingResult } from '../utils/recommendations';
+import { DomainScanResult } from '../utils/domainChecks';
+import { runAllScanners } from '../utils/scanners';
+import { DomainScanAggregate, ExecutedScannerResult } from '../types/domainScan';
+import { APP_CONFIG } from '../config/appConfig';
+import * as amplitude from '@amplitude/analytics-browser';
+import { trackEvent, trackImport } from '../utils/analytics';
+import { scannerCache } from '../utils/scannerCache';
+import { validateImportJSON } from '../utils/importValidation';
+import { useTranslatedQuestions } from '../utils/questionTranslation';
+import { migrateAnswers, needsMigration } from '../utils/answerMigration';
+import { useTranslation } from 'react-i18next';
 
-type Answers = Record<string, any>;
-
-type AppState = {
-  answers: Answers;
-  setAnswer: (key: string, value: any) => void;
+interface AppStateContextValue {
+  questions: Question[];
+  answers: Record<string, string>;
+  setAnswer: (id: string, value: string) => void;
   resetAnswers: () => void;
+  resetAll: () => void;
+  score: ScoreResult;
+  risks: string[];
+  bestPractices: string[];
+  domainScan?: DomainScanResult;
 
+  // New aggregated scanner state
+  domainScanAggregate?: DomainScanAggregate;
   scannerProgress: ExecutedScannerResult[];
-  domainScanAggregate: DomainScanAggregate | null;
   runScanners: (domain: string) => Promise<void>;
-  resetDomainScan: () => void;
 
   exportJSON: () => string;
-  importJSON: (json: string) => boolean;
-};
+  importJSON: (json: string) => { success: boolean; error?: string };
+}
 
-const AppStateContext = createContext<AppState | null>(null);
+export type { AppStateContextValue };
 
-const ANSWERS_KEY = 'risk_assessment_answers_v1';
-const DOMAIN_AGG_KEY = 'risk_assessment_domain_scan_aggregate_v1';
+const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
 
-const loadStored = (key: string, fallback: any) => {
+const ANSWERS_KEY = 'risk_answers_v2';
+const DOMAIN_KEY = 'risk_domain_scan_v2';
+const DOMAIN_AGG_KEY = 'risk_domain_scan_agg_v2';
+
+const loadStored = <T,>(key: string): T | undefined => {
   try {
     const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw);
+    return raw ? (JSON.parse(raw) as T) : undefined;
   } catch {
-    return fallback;
+    return undefined;
   }
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const persist = (key: string, value: any) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // ignore storage failures (private mode, quota, etc.)
+    // ignore storage errors
   }
 };
 
-// Defensive normalization for stored/imported domain scan aggregates.
-// Older saved data may omit `issues` arrays which can crash UI rendering.
-const normalizeDomainScanAggregate = (agg: unknown): DomainScanAggregate | null => {
-  if (!agg || typeof agg !== 'object') return null;
-  const a = agg as Partial<DomainScanAggregate> & { scanners?: unknown };
+/**
+ * IMPORTANT:
+ * Older saved/cached aggregates may not contain `issues` or scanner `issues`.
+ * The UI sometimes calls `.issues.length` which will crash if undefined.
+ * This normalizes the shape so those are always arrays.
+ */
+const normalizeAggregate = (agg: DomainScanAggregate | undefined): DomainScanAggregate | undefined => {
+  if (!agg) return undefined;
 
-  const scanners = Array.isArray(a.scanners)
-    ? (a.scanners as unknown[]).map((s) => {
-        if (!s || typeof s !== 'object') return s as any;
-        const sr = s as any;
-        return {
-          ...sr,
-          issues: Array.isArray(sr.issues) ? sr.issues : []
-        };
-      })
-    : [];
+  const scanners = Array.isArray(agg.scanners) ? agg.scanners : [];
+  const normalizedScanners: ExecutedScannerResult[] = scanners.map((s) => ({
+    ...s,
+    issues: Array.isArray(s.issues) ? s.issues : []
+  }));
 
   return {
-    domain: typeof a.domain === 'string' ? a.domain : '',
-    timestamp: typeof a.timestamp === 'string' ? a.timestamp : new Date().toISOString(),
-    scanners: scanners as DomainScanAggregate['scanners'],
-    issues: Array.isArray(a.issues) ? a.issues : []
+    ...agg,
+    scanners: normalizedScanners,
+    issues: Array.isArray(agg.issues) ? agg.issues : []
   };
 };
 
 export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [answers, setAnswers] = useState<Answers>(() => {
-    const stored = loadStored(ANSWERS_KEY, {});
-    // Apply migration (handles older schema versions)
-    return applyAnswerMigration(stored);
+  const { t, i18n } = useTranslation('questions');
+
+  // Store raw questions data
+  const rawQuestions = useMemo(() => {
+    return (questionsData as { questions: RawQuestion[] }).questions;
+  }, []);
+
+  // Translate questions using i18n
+  const questions = useTranslatedQuestions(rawQuestions);
+
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    return loadStored<Record<string, string>>(ANSWERS_KEY) || {};
   });
 
-  const [scannerProgress, setScannerProgress] = useState<ExecutedScannerResult[]>(() => {
-    // initialize progress list for UI
-    return SCANNERS.map((s) => ({
-      id: s.id,
-      label: s.label,
-      status: 'idle',
-      startedAt: new Date().toISOString()
-    }));
-  });
+  const [migrationDone, setMigrationDone] = useState(false);
 
-  const [domainScanAggregate, setDomainScanAggregate] = useState<DomainScanAggregate | null>(() => {
-    const stored = loadStored(DOMAIN_AGG_KEY, null) as unknown;
-    return normalizeDomainScanAggregate(stored);
-  });
+  // Perform migration after i18n is ready
+  useEffect(() => {
+    if (migrationDone || !i18n.isInitialized) return;
 
-  const setAnswer = (key: string, value: any) => {
+    const stored = answers;
+
+    // Check if migration is needed
+    if (Object.keys(stored).length > 0 && needsMigration(stored)) {
+      const migrationResult = migrateAnswers(stored, rawQuestions, t);
+
+      // Save migrated answers back to localStorage
+      if (migrationResult.migratedCount > 0) {
+        setAnswers(migrationResult.answers);
+        persist(ANSWERS_KEY, migrationResult.answers);
+
+        // Track migration for analytics
+        trackEvent('answers_migrated', {
+          migrated_count: migrationResult.migratedCount,
+          unmatched_count: migrationResult.unmatchedCount
+        });
+      }
+    }
+
+    setMigrationDone(true);
+  }, [i18n.isInitialized, migrationDone, answers, rawQuestions, t]);
+
+  const [domainScanAggregate, setDomainScanAggregate] = useState<DomainScanAggregate | undefined>(() =>
+    normalizeAggregate(loadStored<DomainScanAggregate>(DOMAIN_AGG_KEY))
+  );
+
+  const [scannerProgress, setScannerProgress] = useState<ExecutedScannerResult[]>([]);
+
+  useEffect(() => {
+    if (APP_CONFIG.amplitudeApiKey) {
+      amplitude.init(APP_CONFIG.amplitudeApiKey, undefined, {
+        autocapture: true,
+        cookieOptions: { secure: true, upgrade: true },
+        defaultTracking: true
+      });
+    }
+  }, []);
+
+  const setAnswer = (id: string, value: string) => {
     setAnswers((prev) => {
-      const next = { ...prev, [key]: value };
-      persist(ANSWERS_KEY, next);
-      return next;
+      const updated = { ...prev, [id]: value };
+      persist(ANSWERS_KEY, updated);
+      trackEvent('answer_set', { question_id: id, value });
+      return updated;
     });
   };
 
   const resetAnswers = () => {
     setAnswers({});
-    persist(ANSWERS_KEY, {});
+    localStorage.removeItem(ANSWERS_KEY);
+    trackEvent('answers_reset');
   };
 
-  const resetDomainScan = () => {
-    setScannerProgress(
-      SCANNERS.map((s) => ({
-        id: s.id,
-        label: s.label,
-        status: 'idle',
-        startedAt: new Date().toISOString()
-      }))
-    );
-    setDomainScanAggregate(null);
-    persist(DOMAIN_AGG_KEY, null);
+  const resetAll = () => {
+    setAnswers({});
+    setDomainScanAggregate(undefined);
+    setScannerProgress([]);
+    localStorage.removeItem(ANSWERS_KEY);
+    localStorage.removeItem(DOMAIN_KEY);
+    localStorage.removeItem(DOMAIN_AGG_KEY);
+    trackEvent('reset_all');
   };
+
+  const score = useMemo(() => computeScore(answers, questions), [answers, questions]);
+  const { risks, bestPractices }: RiskMappingResult = useMemo(
+    () => mapRisks(answers, questions),
+    [answers, questions]
+  );
 
   const runScanners = async (domain: string) => {
-    // If you had caching elsewhere that loads an old aggregate, normalize it before using.
-    const cachedResult = null;
-    if (cachedResult) {
-      const normalizedCached = normalizeDomainScanAggregate(cachedResult) ?? cachedResult;
-      setDomainScanAggregate(normalizedCached as DomainScanAggregate);
-      persist(DOMAIN_AGG_KEY, normalizedCached);
+    // Check cache first
+    const cached = normalizeAggregate(scannerCache.get<DomainScanAggregate>(domain));
+    if (cached) {
+      setDomainScanAggregate(cached);
+      setScannerProgress(cached.scanners);
+      trackEvent('domain_scanned_cached', { domain: cached.domain });
       return;
     }
 
-    // Reset UI progress immediately
-    setScannerProgress(
-      SCANNERS.map((s) => ({
-        id: s.id,
-        label: s.label,
-        status: 'running',
-        startedAt: new Date().toISOString()
-      }))
+    // Check rate limit
+    const rateCheck = scannerCache.checkRateLimit();
+    if (!rateCheck.allowed) {
+      throw new Error(`Rate limit exceeded. Please wait ${rateCheck.retryAfter} seconds before scanning again.`);
+    }
+
+    setScannerProgress([]);
+    const aggRaw = await runAllScanners(domain, (partial) => {
+      // Ensure partial progress scanners always have issues arrays too
+      const normalizedPartial = (partial ?? []).map((s) => ({
+        ...s,
+        issues: Array.isArray(s.issues) ? s.issues : []
+      }));
+      setScannerProgress(normalizedPartial);
+    });
+
+    const agg = normalizeAggregate(aggRaw)!;
+
+    setDomainScanAggregate(agg);
+    persist(DOMAIN_AGG_KEY, agg);
+
+    // Cache the result
+    scannerCache.set(domain, agg);
+
+    trackEvent('domain_scanned_modular', { domain: agg.domain, issues_count: agg.issues.length });
+  };
+
+  const exportJSON = () =>
+    JSON.stringify(
+      {
+        version: 2,
+        answers,
+        risks,
+        bestPractices,
+        domainScanAggregate
+      },
+      null,
+      2
     );
 
-    const agg = await runAllScanners(domain, (update) => {
-      setScannerProgress((prev) => {
-        const idx = prev.findIndex((p) => p.id === update.id);
-        if (idx === -1) return prev;
-        const next = [...prev];
-        next[idx] = update;
-        return next;
-      });
-    });
+  const importJSON = (json: string): { success: boolean; error?: string } => {
+    // Validate JSON structure and complexity first
+    const validation = validateImportJSON(json);
+    if (!validation.isValid) {
+      trackImport('json', false, { error: validation.error });
+      return { success: false, error: validation.error };
+    }
 
-    const normalizedAgg = normalizeDomainScanAggregate(agg) ?? agg;
-    setDomainScanAggregate(normalizedAgg as DomainScanAggregate);
-    persist(DOMAIN_AGG_KEY, normalizedAgg);
-  };
-
-  const exportJSON = () => {
-    return JSON.stringify({
-      answers,
-      domainScanAggregate
-    });
-  };
-
-  const importJSON = (json: string) => {
     try {
       const obj = JSON.parse(json);
-      if (obj.answers && typeof obj.answers === 'object') {
-        const migrated = applyAnswerMigration(obj.answers);
-        setAnswers(migrated);
-        persist(ANSWERS_KEY, migrated);
+
+      // Detect version: missing version = v1, explicit version 1 = v1, version 2 = v2
+      const dataVersion = obj.version ?? 1; // Default to v1 if no version specified
+
+      // Validate and import answers
+      if (obj.answers && typeof obj.answers === 'object' && !Array.isArray(obj.answers)) {
+        let answersToImport = obj.answers;
+
+        // For v1 data, always migrate (text-based answers -> option IDs)
+        const shouldMigrate = dataVersion === 1;
+
+        if (shouldMigrate) {
+          const migrationResult = migrateAnswers(answersToImport, rawQuestions, t);
+          answersToImport = migrationResult.answers;
+
+          trackEvent('answers_migrated_import', {
+            migrated_count: migrationResult.migratedCount,
+            unmatched_count: migrationResult.unmatchedCount
+          });
+        }
+
+        setAnswers(answersToImport);
+        persist(ANSWERS_KEY, answersToImport);
       }
-      if (obj.domainScanAggregate) {
-        const normalizedImportedAgg =
-          normalizeDomainScanAggregate(obj.domainScanAggregate) ?? obj.domainScanAggregate;
-        setDomainScanAggregate(normalizedImportedAgg as DomainScanAggregate);
-        persist(DOMAIN_AGG_KEY, normalizedImportedAgg);
+
+      // Import domain scan aggregate (normalize so UI never crashes)
+      if (obj.domainScanAggregate && typeof obj.domainScanAggregate === 'object') {
+        const normalized = normalizeAggregate(obj.domainScanAggregate as DomainScanAggregate);
+        setDomainScanAggregate(normalized);
+        persist(DOMAIN_AGG_KEY, normalized);
       }
-      return true;
-    } catch {
-      return false;
+
+      trackImport('json', true);
+      return { success: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Invalid JSON';
+      trackImport('json', false, { error: msg });
+      return { success: false, error: msg };
     }
   };
 
-  const value = useMemo<AppState>(
-    () => ({
-      answers,
-      setAnswer,
-      resetAnswers,
-      scannerProgress,
-      domainScanAggregate,
-      runScanners,
-      resetDomainScan,
-      exportJSON,
-      importJSON
-    }),
-    [answers, scannerProgress, domainScanAggregate]
-  );
+  const value: AppStateContextValue = {
+    questions,
+    answers,
+    setAnswer,
+    resetAnswers,
+    resetAll,
+    score,
+    risks,
+    bestPractices,
+    domainScan: loadStored<DomainScanResult>(DOMAIN_KEY),
+    domainScanAggregate,
+    scannerProgress,
+    runScanners,
+    exportJSON,
+    importJSON
+  };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 };
 
-export const useAppState = () => {
+export const useAppState = (): AppStateContextValue => {
   const ctx = useContext(AppStateContext);
   if (!ctx) throw new Error('useAppState must be used within AppStateProvider');
   return ctx;

@@ -20,7 +20,7 @@ const DomainScanner = () => {
   const [showDkimModal, setShowDkimModal] = useState(false);
   const [currentDomain, setCurrentDomain] = useState<string>('');
 
-  // ✅ Defensive: some cached/older aggregates may not have `issues`
+  // ✅ Defensive: during state transitions (e.g. when SSL/TLS finishes), issues may be undefined briefly
   const aggregateIssues = domainScanAggregate?.issues ?? [];
 
   const onScan = async (e: React.FormEvent) => {
@@ -96,9 +96,7 @@ const DomainScanner = () => {
           <span className='button-text-full'>
             {loading ? t('domainScanner.scanning') : t('domainScanner.scanButton')}
           </span>
-          <span className='button-text-short'>
-            {loading ? t('domainScanner.scanning') : t('domainScanner.scan')}
-          </span>
+          <span className='button-text-short'>{loading ? t('domainScanner.scanning') : t('domainScanner.scan')}</span>
         </TrackedButton>
       </form>
       {error && <div className='error'>{error}</div>}
@@ -196,6 +194,7 @@ const DomainScanner = () => {
                     {t('domainScanner.errorPrefix')} {prog.error}
                   </div>
                 )}
+
                 {prog?.issues && prog.issues.length > 0 && (
                   <details className='issues-details'>
                     <summary>{t('domainScanner.issues', { count: prog.issues.length })}</summary>
@@ -207,9 +206,7 @@ const DomainScanner = () => {
                 {s.id === 'emailAuth' &&
                   prog?.status === 'complete' &&
                   prog.issues &&
-                  prog.issues.some(
-                    (issue: string) => issue === t('emailAuth.issues.noDKIM', { ns: 'scanners' })
-                  ) &&
+                  prog.issues.some((issue: string) => issue === t('emailAuth.issues.noDKIM', { ns: 'scanners' })) &&
                   currentDomain && (
                     <div className='scanner-dkim-prompt'>
                       <svg className='info-icon' viewBox='0 0 24 24' fill='currentColor'>
@@ -262,7 +259,7 @@ const DomainScanner = () => {
               </p>
             </div>
 
-            {/* ✅ Use safe list so `.length` never crashes */}
+            {/* ✅ Use defensive aggregateIssues so we never read .length of undefined */}
             <h5>
               {t('domainScanner.allIssues')} ({aggregateIssues.length})
             </h5>

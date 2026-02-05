@@ -11,37 +11,6 @@ const Footer: React.FC = () => {
 
   return (
     <footer className='app-footer'>
-      <div className='footer-content'>
-        <div className='footer-text'>
-          {t('footer.builtBy')}{' '}
-          <TrackedLink
-            className='footer-link'
-            href='https://auxiom.com'
-            rel='noopener noreferrer'
-            target='_blank'
-          >
-            {t('footer.blacksmith')}
-          </TrackedLink>
-          . {t('footer.freeAndOpenSource')}{' '}
-          <TrackedLink
-            className='footer-link'
-            href='https://github.com/blacksmith-infosec/risk-assessments'
-            target='_blank'
-            rel='noopener noreferrer'
-          >
-            {t('footer.openSource')}
-          </TrackedLink>
-          . {t('footer.haveSuggestion')}{' '}
-          <TrackedLink
-            className='footer-link'
-            href='https://github.com/blacksmith-infosec/risk-assessments/issues'
-            target='_blank'
-            rel='noopener noreferrer'
-          >
-            {t('footer.letUsKnow')}
-          </TrackedLink>
-          !
-        </div>
         <div className='footer-language-selector'>
           <select
             value={i18n.language}

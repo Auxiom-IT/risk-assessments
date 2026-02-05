@@ -2,48 +2,175 @@ import i18next from 'i18next';
 import type { DomainScanner, ExecutedScannerResult, ScannerInterpretation } from '../../types/domainScan';
 import { fetchCertificates } from '../domainChecks';
 
-type AnyCert = {
-  subject?: { commonName?: string };
-  issuer?: { commonName?: string };
-  notAfter?: string; // ISO date string
-  dnsNames?: string[];
-  isSelfSigned?: boolean;
-  isWildcard?: boolean;
-  isExpired?: boolean;
-  isActive?: boolean;
-};
+type AnyCert = any;
 
-// Helper: days until expiry
-const daysUntil = (isoDate?: string): number | null => {
-  if (!isoDate) return null;
-  const d = new Date(isoDate).getTime();
-  if (!Number.isFinite(d)) return null;
-  const now = Date.now();
-  return Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-};
+function asArray(data: unknown): AnyCert[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
 
-// Strict-ish hostname matcher with wildcard support.
-// - Exact match: example.com === example.com
-// - Subdomain match: www.example.com endsWith .example.com
-// - Wildcard: *.example.com matches foo.example.com AND (for our purposes) also matches example.com
-const matchesDomain = (pattern: string, domain: string): boolean => {
-  const p = (pattern || '').toLowerCase().trim();
-  const d = (domain || '').toLowerCase().trim();
-  if (!p || !d) return false;
+  const d = data as any;
 
-  if (p === d) return true;
+  // Common shapes:
+  // { certificates: [...] }
+  // single cert object
+  if (Array.isArray(d.certificates)) return d.certificates;
 
-  // Wildcard support: *.example.com
-  if (p.startsWith('*.')) {
-    const apex = p.slice(2); // example.com
-    // Treat wildcard certs as relevant for apex scans too
-    if (d === apex) return true;
-    return d.endsWith(`.${apex}`);
+  const looksLikeSingleCert =
+    typeof d === 'object' &&
+    (d.subject ||
+      d.issuer ||
+      d.valid_from ||
+      d.valid_to ||
+      d.not_before ||
+      d.not_after ||
+      d.common_name ||
+      // camelCase variants
+      d.notBefore ||
+      d.notAfter ||
+      d.commonName ||
+      d.issuerName ||
+      d.nameValue);
+
+  return looksLikeSingleCert ? [d] : [];
+}
+
+function normalizeStr(v: unknown): string {
+  return String(v ?? '').trim();
+}
+
+function parseDate(v: unknown): Date | null {
+  const s = normalizeStr(v);
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function getValidity(cert: AnyCert): { notBefore: Date | null; notAfter: Date | null } {
+  // CT-style snake_case
+  const nb1 = parseDate(cert.not_before);
+  const na1 = parseDate(cert.not_after);
+
+  // TLS-style other variants
+  const nb2 = parseDate(cert.valid_from);
+  const na2 = parseDate(cert.valid_to);
+
+  // Our SWA function (camelCase)
+  const nb3 = parseDate(cert.notBefore);
+  const na3 = parseDate(cert.notAfter);
+
+  return {
+    notBefore: nb1 ?? nb2 ?? nb3,
+    notAfter: na1 ?? na2 ?? na3,
+  };
+}
+
+function isCurrentlyActive(cert: AnyCert, now: Date): boolean {
+  const { notBefore, notAfter } = getValidity(cert);
+  if (!notBefore || !notAfter) return false;
+  return notBefore.getTime() <= now.getTime() && now.getTime() <= notAfter.getTime();
+}
+
+function getSubjectCN(cert: AnyCert): string {
+  // TLS-style object
+  const subj = cert.subject;
+  if (subj && typeof subj === 'object') {
+    return normalizeStr(subj.CN ?? subj.cn ?? subj.commonName);
   }
 
-  // Non-wildcard: allow subdomain matches (but not "evilgoogle.com" matching "google.com")
-  return d.endsWith(`.${p}`);
-};
+  // Our SWA function (camelCase)
+  const cnCamel = normalizeStr(cert.commonName);
+  if (cnCamel) return cnCamel;
+
+  // CT-style snake_case / other
+  return normalizeStr(cert.common_name ?? cert.subject_cn ?? cert.subject ?? cert.name_value);
+}
+
+function getIssuerCN(cert: AnyCert): string {
+  const iss = cert.issuer;
+  if (iss && typeof iss === 'object') {
+    return normalizeStr(iss.CN ?? iss.cn ?? iss.commonName);
+  }
+
+  // Our SWA function (camelCase)
+  const issuerCamel = normalizeStr(cert.issuerName);
+  if (issuerCamel) return issuerCamel;
+
+  // CT-style snake_case / other
+  return normalizeStr(cert.issuer_name ?? cert.issuer_cn ?? cert.issuer);
+}
+
+function getAltNames(cert: AnyCert): string[] {
+  // TLS-style: "DNS:example.com, DNS:*.example.com"
+  const san = normalizeStr(cert.altNames ?? cert.subjectaltname);
+  if (san) {
+    return san
+      .split(',')
+      .map((p: string) => p.trim())
+      .map((p: string) => p.replace(/^DNS:/i, '').trim())
+      .filter(Boolean);
+  }
+
+  // Our SWA function: nameValue can be newline-separated SANs from CT
+  const nvCamel = normalizeStr(cert.nameValue);
+  if (nvCamel) {
+    return nvCamel
+      .split('\n')
+      .map((x: string) => x.trim())
+      .filter(Boolean);
+  }
+
+  // CT-style: name_value sometimes includes multiple entries separated by newlines
+  const nv = normalizeStr(cert.name_value);
+  if (nv) {
+    return nv
+      .split('\n')
+      .map((x: string) => x.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function matchesDomain(pattern: string, domain: string): boolean {
+  const p = pattern.toLowerCase();
+  const d = domain.toLowerCase();
+
+  if (!p) return false;
+  if (p === d) return true;
+
+  // wildcard support: *.example.com
+  if (p.startsWith('*.')) {
+    const suffix = p.slice(1); // ".example.com"
+    return d.endsWith(suffix) && d.split('.').length >= suffix.split('.').length;
+  }
+
+  return false;
+}
+
+function certAppliesToDomain(cert: AnyCert, domain: string): boolean {
+  const cn = getSubjectCN(cert);
+  const alt = getAltNames(cert);
+
+  // Prefer SANs if present
+  if (alt.length) return alt.some((a) => matchesDomain(a, domain));
+  if (cn) return matchesDomain(cn, domain);
+
+  return false;
+}
+
+function isSelfSignedLeaf(cert: AnyCert): boolean {
+  // Heuristics:
+  // - issuer/subject CN match
+  // - OR issuer contains "self-signed"
+  const issuerStr = (getIssuerCN(cert) || normalizeStr(cert.issuer_name) || normalizeStr(cert.issuerName)).toLowerCase();
+  const subjectCN = getSubjectCN(cert).toLowerCase();
+  const issuerCN = getIssuerCN(cert).toLowerCase();
+
+  if (issuerStr.includes('self-signed')) return true;
+  if (subjectCN && issuerCN && subjectCN === issuerCN) return true;
+
+  return false;
+}
 
 export const certificateScanner: DomainScanner = {
   id: 'certificates',
@@ -52,145 +179,61 @@ export const certificateScanner: DomainScanner = {
   dataSource: { name: 'TLS', url: 'https://certificate.transparency.dev/' },
 
   run: async (domain: string) => {
+    const data = await fetchCertificates(domain);
+    const certs = asArray(data);
+    const now = new Date();
+
+    const applicable = certs.filter((c) => certAppliesToDomain(c, domain));
+    const active = applicable.filter((c) => isCurrentlyActive(c, now));
+
+    // Only active self-signed
+    const activeSelfSigned = active.filter((c) => isSelfSignedLeaf(c));
+
     const issues: string[] = [];
 
-    const normalized = domain.trim().toLowerCase();
-
-    // Also consider www.<domain> and apex (in case user scanned www.)
-    const targets = Array.from(
-      new Set([
-        normalized,
-        normalized.startsWith('www.') ? normalized.slice(4) : normalized,
-        normalized.startsWith('www.') ? normalized : `www.${normalized}`,
-      ])
-    );
-
-    const appliesToTargets = (name: string) => targets.some((t) => matchesDomain(name, t));
-
-    // NOTE: fetchCertificates should return an array of cert-like objects.
-    const certs = (await fetchCertificates(normalized)) as AnyCert[];
-
-    // Keep only certs that look like they belong to this domain (or wildcard for it).
-    const applicable = (certs || []).filter((c) => {
-      const cn = (c.subject?.commonName || '').toLowerCase();
-      const dnsNames = (c.dnsNames || []).map((n) => n.toLowerCase());
-
-      const matchesCN = cn ? appliesToTargets(cn) : false;
-      const matchesSAN = dnsNames.some((n) => appliesToTargets(n));
-
-      return matchesCN || matchesSAN;
-    });
-
-    const active = applicable.filter((c) => c.isActive);
-    const expired = applicable.filter((c) => c.isExpired);
-
-    // ===== Issues detection =====
-
-    // If CT returns nothing applicable, show "noCerts"
     if (applicable.length === 0) {
       issues.push(i18next.t('certificates.issues.noCerts', { ns: 'scanners' }));
     }
 
-    // Self-signed: count only those explicitly marked self-signed AND active.
-    const selfSignedActive = applicable.filter((c) => c.isSelfSigned && c.isActive);
-    if (selfSignedActive.length > 0) {
+    if (activeSelfSigned.length > 0) {
       issues.push(
-        i18next.t('certificates.issues.selfSigned', {
+        i18next.t('certificates.issues.selfSignedActive', {
           ns: 'scanners',
-          count: selfSignedActive.length,
+          count: activeSelfSigned.length,
         })
       );
     }
 
-    const wildcard = applicable.filter((c) => c.isWildcard);
-    if (wildcard.length > 0) {
-      issues.push(
-        i18next.t('certificates.issues.wildcard', {
-          ns: 'scanners',
-          count: wildcard.length,
-        })
-      );
-    }
+    // Summary uses your translation fragments (found + optional active/expired)
+    const expired = applicable.filter((c) => {
+      const { notAfter } = getValidity(c);
+      return notAfter ? notAfter.getTime() < now.getTime() : false;
+    });
 
-    // Expiration warnings (active certs only)
-    const expiring7: { commonName: string; days: number }[] = [];
-    const expiring30: { commonName: string; days: number }[] = [];
-
-    for (const c of active) {
-      const days = daysUntil(c.notAfter);
-      if (days == null) continue;
-      const commonName = c.subject?.commonName || domain;
-
-      if (days >= 0 && days <= 7) expiring7.push({ commonName, days });
-      else if (days > 7 && days <= 30) expiring30.push({ commonName, days });
-    }
-
-    for (const e of expiring7) {
-      issues.push(
-        i18next.t('certificates.issues.expiring7Days', {
-          ns: 'scanners',
-          commonName: e.commonName,
-          days: e.days,
-        })
-      );
-    }
-    for (const e of expiring30) {
-      issues.push(
-        i18next.t('certificates.issues.expiring30Days', {
-          ns: 'scanners',
-          commonName: e.commonName,
-          days: e.days,
-        })
-      );
-    }
-
-    // Excessive active certs
-    if (active.length >= 10) {
-      issues.push(
-        i18next.t('certificates.issues.excessive', {
-          ns: 'scanners',
-          count: active.length,
-        })
-      );
-    }
-
-    // Many issuers (basic heuristic)
-    const issuers = new Set(
-      applicable
-        .map((c) => (c.issuer?.commonName || '').trim())
-        .filter((x) => x.length > 0)
-    );
-    if (issuers.size >= 3) {
-      issues.push(
-        i18next.t('certificates.issues.manyIssuers', {
-          ns: 'scanners',
-          count: issuers.size,
-        })
-      );
-    }
-
-    // ===== Summary =====
-    const summary = applicable.length
-      ? `${i18next.t('certificates.summary.found', { ns: 'scanners', total: applicable.length })}` +
-        `${active.length ? i18next.t('certificates.summary.active', { ns: 'scanners', active: active.length }) : ''}` +
-        `${expired.length ? i18next.t('certificates.summary.expired', { ns: 'scanners', expired: expired.length }) : ''}`
-      : i18next.t('certificates.summary.noneFound', { ns: 'scanners' });
+    const summary =
+      applicable.length > 0
+        ? `${i18next.t('certificates.summary.found', { ns: 'scanners', total: applicable.length })}` +
+          `${active.length ? i18next.t('certificates.summary.active', { ns: 'scanners', active: active.length }) : ''}` +
+          `${expired.length ? i18next.t('certificates.summary.expired', { ns: 'scanners', expired: expired.length }) : ''}`
+        : i18next.t('certificates.summary.noneFound', { ns: 'scanners' });
 
     return {
       summary,
       issues,
       data: {
+        certificates: applicable,
         totalFound: applicable.length,
         currentlyActive: active.length,
         expired: expired.length,
-        certificates: applicable,
       },
     };
   },
 };
 
-// Interpretation used by utils/scanners/index.ts
-export function interpretCertificateResult(scanner: ExecutedScannerResult, issueCount: number): ScannerInterpretation {
+export function interpretCertificateResult(
+  scanner: ExecutedScannerResult,
+  issueCount: number
+): ScannerInterpretation {
   if (scanner.status === 'error') {
     return {
       severity: 'error',
@@ -199,9 +242,7 @@ export function interpretCertificateResult(scanner: ExecutedScannerResult, issue
     };
   }
 
-  const dataObj =
-    scanner.data && typeof scanner.data === 'object' && scanner.data !== null ? (scanner.data as any) : {};
-
+  const dataObj = scanner.data && typeof scanner.data === 'object' && scanner.data !== null ? (scanner.data as any) : {};
   const totalFound = Number.isFinite(Number(dataObj.totalFound)) ? Number(dataObj.totalFound) : undefined;
   const activeCount = Number.isFinite(Number(dataObj.currentlyActive)) ? Number(dataObj.currentlyActive) : 0;
 
@@ -229,10 +270,7 @@ export function interpretCertificateResult(scanner: ExecutedScannerResult, issue
 
   return {
     severity: 'success',
-    message: i18next.t('certificates.interpretation.validCerts.message', {
-      ns: 'scanners',
-      count: activeCount,
-    }),
+    message: i18next.t('certificates.interpretation.validCerts.message', { ns: 'scanners', count: activeCount }),
     recommendation: i18next.t(
       many
         ? 'certificates.interpretation.validCerts.recommendationMany'

@@ -178,7 +178,6 @@
       "recommendationNormal": "Certificate transparency logs show your domain has valid SSL certificates with no immediate issues."
     }
   }
-}
 },
   "securityHeaders": {
     "label": "Security Headers",

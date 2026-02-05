@@ -112,23 +112,36 @@
       "partial": "⚠ Partial email authentication - missing: {{missing}}",
       "none": "✗ No email authentication configured - domain is vulnerable to spoofing"
     },
-    "interpretation": {
-      "excellent": {
-        "message": "✓ Email authentication fully configured with enforcement",
-        "recommendation": "Excellent! Your domain has complete email authentication protecting against spoofing and phishing."
-      },
-      "configured": {
-        "message": "Email authentication configured",
-        "recommendation": "Configure {{missing}} to protect your domain from email spoofing. Review the issues below for specific configuration improvements."
-      },
-      "partial": {
-        "message": "Email authentication issues detected",
-        "recommendation": "Configure {{missing}} to protect your domain from email spoofing. Review the issues below for specific configuration improvements."
-      },
-      "upgradePolicy": {
-        "recommendation": "Upgrade your DMARC policy from p=none to p=quarantine or p=reject for enforcement. Review the issues below for specific configuration improvements."
-      }
-    }
+"interpretation": {
+  "excellent": {
+    "message": "✓ Email authentication fully configured with enforcement",
+    "recommendation": "Excellent! Your domain has complete email authentication protecting against spoofing and phishing."
+  },
+
+  "configured": {
+    "message": "Email authentication configured",
+    "recommendation": "Configure {{missing}} to fully protect your domain from email spoofing. Review the issues below for specific configuration improvements."
+  },
+
+  "partial": {
+    "message": "Email authentication partially configured",
+    "recommendation": "Configure {{missing}} to fully protect your domain from email spoofing. Review the issues below for specific configuration improvements."
+  },
+
+  "issues_one": {
+    "message": "1 email authentication issue detected",
+    "recommendation": "Review the issue below and add or repair SPF, DMARC, or DKIM records as needed."
+  },
+
+  "issues_other": {
+    "message": "{{count}} email authentication issues detected",
+    "recommendation": "Review the issues below and add or repair SPF, DMARC, or DKIM records as needed."
+  },
+
+  "upgradePolicy": {
+    "recommendation": "Upgrade your DMARC policy from p=none to p=quarantine or p=reject for enforcement. Review the issues below for specific configuration improvements."
+  }
+}
   },
 "certificates": {
   "label": "SSL/TLS Certificates",

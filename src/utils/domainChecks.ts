@@ -72,7 +72,15 @@ export async function fetchCNAME(name: string) {
   return fetchDNS(name, 'CNAME');
 }
 
-export async function fetchCertificates(host: string): Promise<unknown> {
+/**
+ * Fetch certificate transparency results for a host.
+ * Always returns an array of certificate-like objects (possibly empty).
+ * Supports multiple backend response shapes:
+ *  1) Array (preferred): [ { ...cert }, ... ]
+ *  2) Object wrapper: { certificates: [ ... ] }
+ *  3) Nested wrappers from older experiments: { data: [...] } or { result: [...] }
+ */
+export async function fetchCertificates(host: string): Promise<any[]> {
   const url = apiUrl('/api/certificates', { host });
 
   const res = await fetch(url, {
@@ -86,8 +94,22 @@ export async function fetchCertificates(host: string): Promise<unknown> {
 
   const json: any = await res.json();
 
-  if (Array.isArray(json?.certificates)) return json.certificates;
+  // Most common: Azure Function returns an array
+  if (Array.isArray(json)) return json;
 
-  // If the API returns something unexpected, still pass it through for debugging.
-  return json;
+  // Some wrappers used by older versions
+  if (Array.isArray(json?.certificates)) return json.certificates;
+  if (Array.isArray(json?.data)) return json.data;
+  if (Array.isArray(json?.result)) return json.result;
+
+  // If it’s an object map (rare), attempt to convert to array of values
+  if (json && typeof json === 'object') {
+    const values = Object.values(json);
+    if (values.length && values.every((v) => typeof v === 'object')) {
+      return values as any[];
+    }
+  }
+
+  // Unknown shape: return empty array (prevents “no certs” false positives from crashing UI)
+  return [];
 }

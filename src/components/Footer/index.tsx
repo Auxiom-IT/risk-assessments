@@ -16,7 +16,7 @@ const Footer: React.FC = () => {
           {t('footer.builtBy')}{' '}
           <TrackedLink
             className='footer-link'
-            href='https://blacksmithinfosec.com/?utm_source=risk-assessment-tool'
+            href='https://auxiom.com'
             rel='noopener noreferrer'
             target='_blank'
           >
@@ -54,14 +54,14 @@ const Footer: React.FC = () => {
             <option value='es'>{t('footer.languageSpanish')}</option>
           </select>
           <TrackedLink
-            href='https://blacksmithinfosec.com/?utm_source=risk-assessment-tool'
+            href='https://auxiom.com'
             target='_blank'
             rel='noopener noreferrer'
             className='footer-logo-link'
           >
             <img
-              alt='Blacksmith InfoSec'
-              src='https://assets.blacksmithinfosec.com/images/logos/icon/Bright_Blue.png'
+              alt='Auxiom'
+              src='https://auxiom.com/wp-content/uploads/2025/05/auxiom-logo-gold.svg'
               className='footer-logo'
             />
           </TrackedLink>

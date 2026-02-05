@@ -22,6 +22,29 @@ const daysUntil = (isoDate?: string): number | null => {
   return Math.ceil((d - now) / (1000 * 60 * 60 * 24));
 };
 
+// Strict-ish hostname matcher with wildcard support.
+// - Exact match: example.com === example.com
+// - Subdomain match: www.example.com endsWith .example.com
+// - Wildcard: *.example.com matches foo.example.com AND (for our purposes) also matches example.com
+const matchesDomain = (pattern: string, domain: string): boolean => {
+  const p = (pattern || '').toLowerCase().trim();
+  const d = (domain || '').toLowerCase().trim();
+  if (!p || !d) return false;
+
+  if (p === d) return true;
+
+  // Wildcard support: *.example.com
+  if (p.startsWith('*.')) {
+    const apex = p.slice(2); // example.com
+    // Treat wildcard certs as relevant for apex scans too
+    if (d === apex) return true;
+    return d.endsWith(`.${apex}`);
+  }
+
+  // Non-wildcard: allow subdomain matches (but not "evilgoogle.com" matching "google.com")
+  return d.endsWith(`.${p}`);
+};
+
 export const certificateScanner: DomainScanner = {
   id: 'certificates',
   label: 'certificates.label',
@@ -31,28 +54,29 @@ export const certificateScanner: DomainScanner = {
   run: async (domain: string) => {
     const issues: string[] = [];
 
+    const normalized = domain.trim().toLowerCase();
+
+    // Also consider www.<domain> and apex (in case user scanned www.)
+    const targets = Array.from(
+      new Set([
+        normalized,
+        normalized.startsWith('www.') ? normalized.slice(4) : normalized,
+        normalized.startsWith('www.') ? normalized : `www.${normalized}`,
+      ])
+    );
+
+    const appliesToTargets = (name: string) => targets.some((t) => matchesDomain(name, t));
+
     // NOTE: fetchCertificates should return an array of cert-like objects.
-    const certs = (await fetchCertificates(domain)) as AnyCert[];
+    const certs = (await fetchCertificates(normalized)) as AnyCert[];
 
     // Keep only certs that look like they belong to this domain (or wildcard for it).
     const applicable = (certs || []).filter((c) => {
       const cn = (c.subject?.commonName || '').toLowerCase();
       const dnsNames = (c.dnsNames || []).map((n) => n.toLowerCase());
-      const d = domain.toLowerCase();
 
-      const matchesCN =
-        cn === d ||
-        cn === `*.${d}` ||
-        cn.endsWith(`.${d}`) ||
-        (cn.startsWith('*.') && d.endsWith(cn.slice(1)));
-
-      const matchesSAN = dnsNames.some(
-        (n) =>
-          n === d ||
-          n === `*.${d}` ||
-          n.endsWith(`.${d}`) ||
-          (n.startsWith('*.') && d.endsWith(n.slice(1)))
-      );
+      const matchesCN = cn ? appliesToTargets(cn) : false;
+      const matchesSAN = dnsNames.some((n) => appliesToTargets(n));
 
       return matchesCN || matchesSAN;
     });
@@ -62,12 +86,12 @@ export const certificateScanner: DomainScanner = {
 
     // ===== Issues detection =====
 
-    // If CT returns nothing, that's not "success" — it should show the "noCerts" state.
+    // If CT returns nothing applicable, show "noCerts"
     if (applicable.length === 0) {
       issues.push(i18next.t('certificates.issues.noCerts', { ns: 'scanners' }));
     }
 
-    // Self-signed: count only those explicitly marked self-signed AND active (if you want active-only).
+    // Self-signed: count only those explicitly marked self-signed AND active.
     const selfSignedActive = applicable.filter((c) => c.isSelfSigned && c.isActive);
     if (selfSignedActive.length > 0) {
       issues.push(
@@ -101,7 +125,6 @@ export const certificateScanner: DomainScanner = {
       else if (days > 7 && days <= 30) expiring30.push({ commonName, days });
     }
 
-    // Add per-cert issues (keep it simple and stable)
     for (const e of expiring7) {
       issues.push(
         i18next.t('certificates.issues.expiring7Days', {
@@ -160,7 +183,6 @@ export const certificateScanner: DomainScanner = {
         totalFound: applicable.length,
         currentlyActive: active.length,
         expired: expired.length,
-        // keep raw list if you want to render later / debug
         certificates: applicable,
       },
     };
@@ -183,7 +205,6 @@ export function interpretCertificateResult(scanner: ExecutedScannerResult, issue
   const totalFound = Number.isFinite(Number(dataObj.totalFound)) ? Number(dataObj.totalFound) : undefined;
   const activeCount = Number.isFinite(Number(dataObj.currentlyActive)) ? Number(dataObj.currentlyActive) : 0;
 
-  // If CT returned none, show the "noCerts" interpretation (so it matches the summary box).
   if (totalFound === 0) {
     return {
       severity: 'info',

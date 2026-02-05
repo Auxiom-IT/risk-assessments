@@ -13,7 +13,6 @@ function apiUrl(path: string, params?: Record<string, string>) {
 }
 
 export async function fetchDNS(name: string, type: DNSRecordType): Promise<string[]> {
-  // IMPORTANT:
   // Our current SWA Function route is `dns/resolve` => `/api/dns/resolve`
   const url = apiUrl('/api/dns/resolve', { name, type });
 
@@ -73,14 +72,72 @@ export async function fetchCNAME(name: string) {
 }
 
 /**
- * Fetch certificate transparency results for a host.
- * Always returns an array of certificate-like objects (possibly empty).
- * Supports multiple backend response shapes:
- *  1) Array (preferred): [ { ...cert }, ... ]
- *  2) Object wrapper: { certificates: [ ... ] }
- *  3) Nested wrappers from older experiments: { data: [...] } or { result: [...] }
+ * Normalized certificate shape expected by certificateScanner.ts
+ * (matches what your UI logic is already written against).
  */
-export async function fetchCertificates(host: string): Promise<any[]> {
+export type NormalizedCert = {
+  subject?: { commonName?: string };
+  issuer?: { commonName?: string };
+  notBefore?: string; // ISO date string (or parseable)
+  notAfter?: string;  // ISO date string (or parseable)
+  dnsNames?: string[];
+  isSelfSigned?: boolean;
+  isWildcard?: boolean;
+  isExpired?: boolean;
+  isActive?: boolean;
+};
+
+/**
+ * Convert crt.sh-ish row into NormalizedCert.
+ * Your API currently returns rows like:
+ * { commonName, nameValue, issuerName, notBefore, notAfter, ... }
+ */
+function normalizeCrtShRow(row: any): NormalizedCert {
+  const cn = typeof row?.commonName === 'string' ? row.commonName : '';
+  const issuerName = typeof row?.issuerName === 'string' ? row.issuerName : '';
+
+  // crt.sh returns name_value as newline-separated DNS names
+  const nameValue = typeof row?.nameValue === 'string' ? row.nameValue : '';
+  const dnsNames = nameValue
+    .split(/\r?\n/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const notBeforeRaw = row?.notBefore ?? row?.not_before ?? null;
+  const notAfterRaw = row?.notAfter ?? row?.not_after ?? null;
+
+  const notBefore = notBeforeRaw != null ? String(notBeforeRaw) : undefined;
+  const notAfter = notAfterRaw != null ? String(notAfterRaw) : undefined;
+
+  const now = Date.now();
+  const nb = notBefore ? Date.parse(notBefore) : NaN;
+  const na = notAfter ? Date.parse(notAfter) : NaN;
+
+  const isExpired = Number.isFinite(na) ? na < now : false;
+  const isActive =
+    Number.isFinite(nb) && Number.isFinite(na) ? nb <= now && now <= na : false;
+
+  const wildcard =
+    (cn && cn.startsWith('*.')) || dnsNames.some((n) => n.startsWith('*.'));
+
+  // IMPORTANT: avoid false positives
+  // Only mark self-signed when issuer == subject CN and both exist.
+  const selfSigned = Boolean(cn && issuerName && issuerName === cn);
+
+  return {
+    subject: cn ? { commonName: cn } : undefined,
+    issuer: issuerName ? { commonName: issuerName } : undefined,
+    notBefore,
+    notAfter,
+    dnsNames,
+    isWildcard: wildcard,
+    isExpired,
+    isActive,
+    isSelfSigned: selfSigned,
+  };
+}
+
+export async function fetchCertificates(host: string): Promise<NormalizedCert[]> {
   const url = apiUrl('/api/certificates', { host });
 
   const res = await fetch(url, {
@@ -94,22 +151,23 @@ export async function fetchCertificates(host: string): Promise<any[]> {
 
   const json: any = await res.json();
 
-  // Most common: Azure Function returns an array
-  if (Array.isArray(json)) return json;
+  // Support multiple response shapes:
+  // A) API returns { certificates: [...] }
+  // B) API returns [...] (your current crt.sh function does this)
+  const rawList: any[] =
+    Array.isArray(json?.certificates) ? json.certificates :
+    Array.isArray(json) ? json :
+    [];
 
-  // Some wrappers used by older versions
-  if (Array.isArray(json?.certificates)) return json.certificates;
-  if (Array.isArray(json?.data)) return json.data;
-  if (Array.isArray(json?.result)) return json.result;
-
-  // If it’s an object map (rare), attempt to convert to array of values
-  if (json && typeof json === 'object') {
-    const values = Object.values(json);
-    if (values.length && values.every((v) => typeof v === 'object')) {
-      return values as any[];
-    }
+  // If it already looks like the normalized shape, pass through.
+  // (i.e., subject/dnsNames exist)
+  if (
+    rawList.length > 0 &&
+    (rawList[0]?.subject || rawList[0]?.dnsNames || rawList[0]?.issuer)
+  ) {
+    return rawList as NormalizedCert[];
   }
 
-  // Unknown shape: return empty array (prevents “no certs” false positives from crashing UI)
-  return [];
+  // Otherwise, assume crt.sh-ish rows and normalize.
+  return rawList.map(normalizeCrtShRow);
 }

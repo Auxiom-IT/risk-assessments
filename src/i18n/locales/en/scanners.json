@@ -130,49 +130,55 @@
       }
     }
   },
-  "certificates": {
-    "label": "SSL/TLS Certificates",
-    "description": "Analyzes SSL certificates from public certificate transparency logs",
-    "issues": {
-      "noCerts": "No SSL certificates found - if you use HTTPS, this might indicate a very new certificate",
-      "expiring7Days": "Certificate for {{commonName}} expires in {{days}} day(s) - renew immediately!",
-      "expiring30Days": "Certificate for {{commonName}} expires in {{days}} days - plan renewal soon",
-      "selfSigned": "{{count}} self-signed certificate(s) detected - not trusted by browsers",
-      "wildcard": "{{count}} wildcard certificate(s) found - ensure proper security controls",
-      "excessive": "High number of active certificates ({{count}}) - review for unnecessary or duplicate certs",
-      "recentExpired": "{{count}} certificate(s) expired recently without replacement: {{names}}",
-      "manyIssuers": "Certificates from {{count}} different issuers - consider standardizing on fewer CAs"
-    },
-    "summary": {
-      "found": "Found {{total}} total certificates",
-      "active": ", {{active}} currently active",
-      "expired": ", {{expired}} expired",
-      "none": "No certificates found in transparency logs"
-    },
-    "interpretation": {
-      "noCerts": {
-        "message": "No certificates found",
-        "recommendation": "No SSL certificates found in public certificate transparency logs. If you use HTTPS, this might indicate a very new certificate or the certificate is not yet logged."
-      },
-      "expiring7Days": {
-        "message": "{{count}} certificate(s) expiring within 7 days!",
-        "recommendation": "Renew expiring certificates immediately to avoid service disruption. Consider setting up automated renewal (e.g., using Let's Encrypt with auto-renewal)."
-      },
-      "expiring30Days": {
-        "message": "{{count}} certificate(s) expiring within 30 days",
-        "recommendation": "Plan to renew certificates soon to avoid last-minute issues. Set up monitoring alerts for certificate expiration."
-      },
-      "issuesDetected": {
-        "message": "{{activeCertCount}} active certificate(s), {{issueCount}} issue(s) detected",
-        "recommendation": "Review the certificate issues below. Consider cleaning up expired certificates and standardizing on a single Certificate Authority."
-      },
-      "validCerts": {
-        "message": "{{count}} valid certificate(s) found",
-        "recommendationMany": "Large number of certificates found. Regularly review and remove unnecessary certificates.",
-        "recommendationNormal": "Certificate transparency logs show your domain has valid SSL certificates with no immediate issues."
-      }
-    }
+"certificates": {
+  "label": "SSL/TLS Certificates",
+  "description": "Analyzes SSL certificates from public certificate transparency logs",
+  "issues": {
+    "noCerts": "No SSL certificates found - if you use HTTPS, this might indicate a very new certificate",
+    "expiring7Days": "Certificate for {{commonName}} expires in {{days}} day(s) - renew immediately!",
+    "expiring30Days": "Certificate for {{commonName}} expires in {{days}} days - plan renewal soon",
+    "selfSigned": "{{count}} self-signed certificate(s) detected - not trusted by browsers",
+    "wildcard": "{{count}} wildcard certificate(s) found - ensure proper security controls",
+    "excessive": "High number of active certificates ({{count}}) - review for unnecessary or duplicate certs",
+    "recentExpired": "{{count}} certificate(s) expired recently without replacement: {{names}}",
+    "manyIssuers": "Certificates from {{count}} different issuers - consider standardizing on fewer CAs"
   },
+  "summary": {
+    "found": "Found {{total}} total certificates",
+    "active": ", {{active}} currently active",
+    "expired": ", {{expired}} expired",
+    "none": "No certificates found in transparency logs",
+    "noneFound": "No certificates found in transparency logs"
+  },
+  "interpretation": {
+    "noCerts": {
+      "message": "No certificates found",
+      "recommendation": "No SSL certificates found in public certificate transparency logs. If you use HTTPS, this might indicate a very new certificate or the certificate is not yet logged."
+    },
+    "expiring7Days": {
+      "message": "{{count}} certificate(s) expiring within 7 days!",
+      "recommendation": "Renew expiring certificates immediately to avoid service disruption. Consider setting up automated renewal (e.g., using Let's Encrypt with auto-renewal)."
+    },
+    "expiring30Days": {
+      "message": "{{count}} certificate(s) expiring within 30 days",
+      "recommendation": "Plan to renew certificates soon to avoid last-minute issues. Set up monitoring alerts for certificate expiration."
+    },
+    "issuesDetected": {
+      "message": "{{activeCertCount}} active certificate(s), {{issueCount}} issue(s) detected",
+      "recommendation": "Review the certificate issues below. Consider cleaning up expired certificates and standardizing on a single Certificate Authority."
+    },
+    "validCerts": {
+      "message": "{{count}} valid certificate(s) found",
+      "recommendationMany": "Large number of certificates found. Regularly review and remove unnecessary certificates.",
+      "recommendationNormal": "Certificate transparency logs show your domain has valid SSL certificates with no immediate issues."
+    },
+    "ok": {
+      "message": "{{count}} valid certificate(s) found",
+      "recommendation": "Certificate transparency logs show your domain has valid SSL certificates with no immediate issues."
+    },
+    "okRecommendation": "Certificate transparency logs show your domain has valid SSL certificates with no immediate issues."
+  }
+},
   "securityHeaders": {
     "label": "Security Headers",
     "description": "Analyzes HTTP security headers using securityheaders.com",
